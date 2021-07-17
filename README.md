@@ -52,7 +52,7 @@ You can then run the app by entering:
 
 `chg contrast n` - Change contrast by n and returns the current value (requires current and max reading support).
 
-`chg volume n` - Change contrast by n and returns the current value (requires current and max reading support).
+`chg volume n` - Change volume by n and returns the current value (requires current and max reading support).
 
 You can also use 'b', 'c' and 'v' instead of 'brightness', 'contrast', 'volume'.
 
