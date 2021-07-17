@@ -24,7 +24,7 @@ You can then run the app by entering:
 
 `m1ddc chg volume -10` - Decreases volume by 10
 
-##Paramteres:
+## Paramteres:
 
 `set brightness n ` - Sets brightness to n, where n is a number between 0 and the maximum value (usually 100).
 
