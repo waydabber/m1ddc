@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
     "\n"
     " chg brightness n     - Change brightness by n and returns the current value (requires current and max reading support).\n"
     " chg contrast n       - Change contrast by n and returns the current value (requires current and max reading support).\n"
-    " chg volume n         - Change contrast by n and returns the current value (requires current and max reading support).\n"
+    " chg volume n         - Change volume by n and returns the current value (requires current and max reading support).\n"
     "\n"
     "You can also use 'b', 'v' instead of 'brightness', 'volume' etc.\n"
     ;
