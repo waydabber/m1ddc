@@ -4,6 +4,7 @@
 
 typedef CFTypeRef IOAVServiceRef;
 extern IOAVServiceRef IOAVServiceCreate(CFAllocatorRef allocator);
+extern IOAVServiceRef IOAVServiceCreateWithService(CFAllocatorRef allocator, io_service_t service);
 extern IOReturn IOAVServiceReadI2C(IOAVServiceRef service, uint32_t chipAddress, uint32_t offset, void* outputBuffer, uint32_t outputBufferSize);
 extern IOReturn IOAVServiceWriteI2C(IOAVServiceRef service, uint32_t chipAddress, uint32_t dataAddress, void* inputBuffer, uint32_t inputBufferSize);
 
@@ -19,7 +20,8 @@ extern IOReturn IOAVServiceWriteI2C(IOAVServiceRef service, uint32_t chipAddress
 
 int main(int argc, char** argv) {
     
-    NSString *returnText =@"Controls volume, brightness, contrast of external Display connected via USB-C (DisplayPort Alt Mode) over DDC on an M1 Mac.\n"
+    NSString *returnText =@"Controls volume, brightness, contrast of a single external Display connected via USB-C (DisplayPort Alt Mode) over DDC on an M1 Mac.\n"
+    "Control of displays attached via the HDMI port or by other means is not currently supported.\n"
     "\n"
     "Example usages:\n"
     "\n"
@@ -51,28 +53,94 @@ int main(int argc, char** argv) {
     "You can also use 'b', 'v' instead of 'brightness', 'volume' etc.\n"
     ;
     int returnValue = 1;
-
+    
     if (argc >= 3) {
+
+        // Display lister and selection
         
-        IOAVServiceRef avService = IOAVServiceCreate(kCFAllocatorDefault);
-        
-        if (!avService) {
+        int s=0; // Indicate the presence of display selection (+ messy argument shifter...)
+
+        if ( !(strcmp(argv[s+1], "display")) ) {
             
-            returnText = @"Could not find a suitable external display connected to an M1 Mac. :(!\n";
-            goto cya;
+            if ( !(strcmp(argv[s+2], "list")) || !(strcmp(argv[s+2], "l")) ) {
+                            
+                io_iterator_t iter;
+                io_service_t service = 0;
+                io_registry_entry_t root = IORegistryGetRootEntry(kIOMasterPortDefault);
+                kern_return_t kerr = IORegistryEntryCreateIterator(root, "IOService", kIORegistryIterateRecursively, &iter);
+                
+                if (kerr != KERN_SUCCESS) {
+                    IOObjectRelease(iter);
+                    returnText = [NSString stringWithFormat:@"Error on IORegistryEntryCreateIterator: %d", kerr];
+                    goto cya;
+                }
+
+                CFStringRef edidUUIDKey = CFStringCreateWithCString(kCFAllocatorDefault, "EDID UUID", kCFStringEncodingASCII);
+                CFStringRef locationKey = CFStringCreateWithCString(kCFAllocatorDefault, "Location", kCFStringEncodingASCII);
+                CFStringRef displayAttributesKey = CFStringCreateWithCString(kCFAllocatorDefault, "DisplayAttributes", kCFStringEncodingASCII);
+                CFStringRef externalAVServiceLocation = CFStringCreateWithCString(kCFAllocatorDefault, "External", kCFStringEncodingASCII);
+
+                returnText = @"";
+                
+                int i=1;
+                
+                while ((service = IOIteratorNext(iter)) != MACH_PORT_NULL) {
+                    io_name_t name;
+                    IORegistryEntryGetName(service, name);
+                    if (strcmp(name, "AppleCLCD2") == 0) {
+
+                        CFStringRef edidUUID = IORegistryEntrySearchCFProperty(service, kIOServicePlane, edidUUIDKey, kCFAllocatorDefault, kIORegistryIterateRecursively);
+
+                        if ( !(edidUUID == NULL) ) {
+                        
+                            CFDictionaryRef displayAttrs = IORegistryEntrySearchCFProperty(service, kIOServicePlane, displayAttributesKey, kCFAllocatorDefault, kIORegistryIterateRecursively);
+                                                    
+                            if (displayAttrs) {
+                                NSDictionary* displayAttrsNS = (NSDictionary*)displayAttrs;
+                                NSDictionary* productAttrs = [displayAttrsNS objectForKey:@"ProductAttributes"];
+                                if (productAttrs) {
+                                    returnText = [NSString stringWithFormat:@"%@%i - %@", returnText, i, [productAttrs objectForKey:@"ProductName"]];
+                                }
+                            }
+
+                            returnText = [NSString stringWithFormat:@"%@\n", returnText];
+                            i++;
+                            
+                        }
+                        
+                    }
+                    
+                }
+                
+                returnValue = 0;
+                goto cya;
+                
+            } else {
+
+                s=2; // Display selector should be present shift argument order by two
+                
+                if ( !(argc >= s+3) ) {
+                    
+                    returnText = [NSString stringWithFormat:@"Insufficient number of arguments! Enter 'm1ddc help' for help!\n"];
+                    goto cya;
+                    
+                }
+                
+            }
             
         }
         
-        IOReturn err;
+        // Get ready for DDC operations
+        
         UInt8 data[256];
         memset(data, 0, sizeof(data));
 
-        if ( !(strcmp(argv[2], "brightness")) || !(strcmp(argv[2], "b")) ) { data[2] = BRIGHTNESS; }
-        else if ( !(strcmp(argv[2], "contrast")) || !(strcmp(argv[2], "c"))  ) { data[2] = CONTRAST; }
-        else if ( !(strcmp(argv[2], "volume")) || !(strcmp(argv[2], "v"))  ) { data[2] = VOLUME; }
-        else if ( !(strcmp(argv[2], "mute")) || !(strcmp(argv[2], "m"))  ) { data[2] = MUTE; }
-        else if ( !(strcmp(argv[2], "input")) || !(strcmp(argv[2], "i"))  ) { data[2] = INPUT; }
-        else if ( !(strcmp(argv[2], "standby")) || !(strcmp(argv[2], "s"))  ) { data[2] = STANDBY; }
+        if ( !(strcmp(argv[s+2], "brightness")) || !(strcmp(argv[s+2], "b")) ) { data[2] = BRIGHTNESS; }
+        else if ( !(strcmp(argv[s+2], "contrast")) || !(strcmp(argv[s+2], "c"))  ) { data[2] = CONTRAST; }
+        else if ( !(strcmp(argv[s+2], "volume")) || !(strcmp(argv[s+2], "v"))  ) { data[2] = VOLUME; }
+        else if ( !(strcmp(argv[s+2], "mute")) || !(strcmp(argv[s+2], "m"))  ) { data[2] = MUTE; }
+        else if ( !(strcmp(argv[s+2], "input")) || !(strcmp(argv[s+2], "i"))  ) { data[2] = INPUT; }
+        else if ( !(strcmp(argv[s+2], "standby")) || !(strcmp(argv[s+2], "s"))  ) { data[2] = STANDBY; }
         else {
             
             returnText = [NSString stringWithFormat:@"Use 'brightness', 'contrast', 'volume' or 'mute' as second parameter! Enter 'm1ddc help' for help!\n"];
@@ -83,7 +151,30 @@ int main(int argc, char** argv) {
         signed char curValue=-1;
         signed char maxValue=-1;
         
-        if ( !(strcmp(argv[1], "get")) || !(strcmp(argv[1], "max")) || !(strcmp(argv[1], "chg")) ) {
+        IOReturn err;
+        IOAVServiceRef avService;
+        
+        if ( s == 2 ) {
+            
+            // TODO: This should be rewritten to use IOAVServiceCreateWithService to select proper display in case a specific display is set
+            avService = IOAVServiceCreate(kCFAllocatorDefault);
+
+        } else {
+
+            avService = IOAVServiceCreate(kCFAllocatorDefault);
+
+        }
+        
+        if (!avService) {
+            
+            returnText = @"Could not find a suitable external display connected to an M1 Mac. :(!\n";
+            goto cya;
+            
+        }
+        
+        // Read stuff
+        
+        if ( !(strcmp(argv[s+1], "get")) || !(strcmp(argv[s+1], "max")) || !(strcmp(argv[s+1], "chg")) ) {
 
             data[0] = 0x82;
             data[1] = 0x01;
@@ -124,13 +215,13 @@ int main(int argc, char** argv) {
             [[readData subdataWithRange:maxValueRange] getBytes:&maxValue length:sizeof(1)];
             [[readData subdataWithRange:currentValueRange] getBytes:&curValue length:sizeof(1)];
 
-            if ( !(strcmp(argv[1], "get")) ) {
+            if ( !(strcmp(argv[s+1], "get")) ) {
 
                 returnText = [NSString stringWithFormat:@"%i", curValue];
                 returnValue = 0;
                 goto cya;
 
-            } else if ( !(strcmp(argv[1], "max")) ) {
+            } else if ( !(strcmp(argv[s+1], "max")) ) {
                 
                 returnText = [NSString stringWithFormat:@"%i", maxValue];
                 returnValue = 0;
@@ -140,22 +231,24 @@ int main(int argc, char** argv) {
         
         }
 
-        if ( !(strcmp(argv[1], "set")) || !(strcmp(argv[1], "chg")) ) {
+        // Set stuff
+        
+        if ( !(strcmp(argv[s+1], "set")) || !(strcmp(argv[s+1], "chg")) ) {
             
-            if (argc != 4) {
+            if (argc != s+4) {
                 
-                returnText = [NSString stringWithFormat:@"Third parameter should be a number! Enter 'm1ddc help' for help!\n"];
+                returnText = [NSString stringWithFormat:@"Missing value! Enter 'm1ddc help' for help!\n"];
                 goto cya;
 
             }
             
             int setValue;
             
-            if ( !(strcmp(argv[3], "on")) ) { setValue=1; }
-            else if ( !(strcmp(argv[3], "off")) ) { setValue=2; }
-            else { setValue = atoi(argv[3]); }
+            if ( !(strcmp(argv[s+3], "on")) ) { setValue=1; }
+            else if ( !(strcmp(argv[s+3], "off")) ) { setValue=2; }
+            else { setValue = atoi(argv[s+3]); }
             
-            if ( !(strcmp(argv[1], "chg")) ) {
+            if ( !(strcmp(argv[s+1], "chg")) ) {
                 
                 setValue = curValue + setValue;
                 if (setValue < 0 ) { setValue=0; }
@@ -183,7 +276,7 @@ int main(int argc, char** argv) {
                 
             }
 
-            if ( !(strcmp(argv[1], "chg")) ) {
+            if ( !(strcmp(argv[s+1], "chg")) ) {
 
                 returnText = [NSString stringWithFormat:@"%i", setValue];
                 returnValue = 0;
@@ -199,7 +292,7 @@ int main(int argc, char** argv) {
             
         }
             
-        returnText = @"Use 'set', 'get', 'max' or 'chg' as first parameter! Enter 'm1ddc help' for help!\n";
+        returnText = @"Use 'set', 'get', 'max', 'chg' as first parameter! Enter 'm1ddc help' for help!\n";
         goto cya;
             
     }
