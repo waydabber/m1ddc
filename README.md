@@ -56,6 +56,14 @@ You can then run the app by entering:
 
 You can also use 'b', 'c' and 'v' instead of 'brightness', 'contrast', 'volume'.
 
+## Example use in a script
+
+Check out the following [hammerspoon](https://github.com/Hammerspoon/hammerspoon) script. 
+
+This script allows you to control the volume of your external Display' brightness, contrast and volume via DDC (if you use an M1 Mac) using [m1ddc](https://github.com/waydabber/m1ddc) and also control your Yamaha AV Receiver through network. The script listens to the standard Apple keyboard media keys and shos the standard macOS Birghtness and Volume OSDs via uses [showosd](https://github.com/waydabber/showosd) :
+
+https://gist.github.com/waydabber/3241fc146cef65131a42ce30e4b6eab7
+
 ## Thanks
 
 Thanks to [@tao-j](https://github.com/tao-j) [@alin23](https://github.com/alin23), [@ybbond](https://github.com/ybbond)
