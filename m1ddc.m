@@ -16,39 +16,45 @@ extern IOReturn IOAVServiceWriteI2C(IOAVServiceRef service, uint32_t chipAddress
 #define STANDBY 0xD6
 
 #define DDC_WAIT 10000 // depending on display this must be set to as high as 50000
-#define DDC_ITERATIONS 3 // depending on display this must be set higher
+#define DDC_ITERATIONS 2 // depending on display this must be set higher
 
 int main(int argc, char** argv) {
+    
+    IOAVServiceRef avService;
     
     NSString *returnText =@"Controls volume, brightness, contrast of a single external Display connected via USB-C (DisplayPort Alt Mode) over DDC on an M1 Mac.\n"
     "Control of displays attached via the HDMI port or by other means is not currently supported.\n"
     "\n"
     "Example usages:\n"
     "\n"
-    " m1ddc set contrast 5 - Sets contrast to 5\n"
-    " m1ddc get brightness - Returns current brightness\n"
-    " m1ddc chg volume -10 - Decreases volume by 10\n"
+    " m1ddc set contrast 5          - Sets contrast to 5\n"
+    " m1ddc get brightness          - Returns current brightness\n"
+    " m1ddc chg volume -10          - Decreases volume by 10\n"
+    " m1ddc display 1 set volume 50 - Sets volume to 50 on Display 1\n"
     "\n"
     "Commands:\n"
     "\n"
-    " set brightness n     - Sets brightness to n, where n is a number between 0 and the maximum value (usually 100).\n"
-    " set contrast n       - Sets contrast to n, where n is a number between 0 and the maximum value (usually 100).\n"
-    " set volume n         - Sets volume to n, where n is a number between 0 and the maximum value (usually 100).\n"
+    " set brightness n - Sets brightness to n, where n is a number between 0 and the maximum value (usually 100).\n"
+    " set contrast n   - Sets contrast to n, where n is a number between 0 and the maximum value (usually 100).\n"
+    " set volume n     - Sets volume to n, where n is a number between 0 and the maximum value (usually 100).\n"
     "\n"
-    " set mute on          - Sets mute on (you can use 1 instead of 'on')\n"
-    " set mute off         - Sets mute off (you can use 2 instead of 'off')\n"
+    " set mute on      - Sets mute on (you can use 1 instead of 'on')\n"
+    " set mute off     - Sets mute off (you can use 2 instead of 'off')\n"
     "\n"
-    " get brightness       - Returns current brightness (if supported by the display).\n"
-    " get contrast         - Returns current contrast (if supported by the display).\n"
-    " get volume           - Returns current volume (if supported by the display).\n"
+    " get brightness   - Returns current brightness (if supported by the display).\n"
+    " get contrast     - Returns current contrast (if supported by the display).\n"
+    " get volume       - Returns current volume (if supported by the display).\n"
     "\n"
-    " max brightness       - Returns maximum brightness (if supported by the display, usually 100).\n"
-    " max contrast         - Returns maximum contrast (if supported by the display, usually 100).\n"
-    " max volume           - Returns maximum volume (if supported by the display, usually 100).\n"
+    " max brightness   - Returns maximum brightness (if supported by the display, usually 100).\n"
+    " max contrast     - Returns maximum contrast (if supported by the display, usually 100).\n"
+    " max volume       - Returns maximum volume (if supported by the display, usually 100).\n"
     "\n"
-    " chg brightness n     - Change brightness by n and returns the current value (requires current and max reading support).\n"
-    " chg contrast n       - Change contrast by n and returns the current value (requires current and max reading support).\n"
-    " chg volume n         - Change volume by n and returns the current value (requires current and max reading support).\n"
+    " chg brightness n - Changes brightness by n and returns the current value (requires current and max reading support).\n"
+    " chg contrast n   - Changes contrast by n and returns the current value (requires current and max reading support).\n"
+    " chg volume n     - Changes volume by n and returns the current value (requires current and max reading support).\n"
+    "\n"
+    " display list     - Lists displays.\n"
+    " display n        - Chooses which display to control (use number 1, 2 etc.)\n"
     "\n"
     "You can also use 'b', 'v' instead of 'brightness', 'volume' etc.\n"
     ;
@@ -62,71 +68,93 @@ int main(int argc, char** argv) {
 
         if ( !(strcmp(argv[s+1], "display")) ) {
             
-            if ( !(strcmp(argv[s+2], "list")) || !(strcmp(argv[s+2], "l")) ) {
-                            
-                io_iterator_t iter;
-                io_service_t service = 0;
-                io_registry_entry_t root = IORegistryGetRootEntry(kIOMasterPortDefault);
-                kern_return_t kerr = IORegistryEntryCreateIterator(root, "IOService", kIORegistryIterateRecursively, &iter);
-                
-                if (kerr != KERN_SUCCESS) {
-                    IOObjectRelease(iter);
-                    returnText = [NSString stringWithFormat:@"Error on IORegistryEntryCreateIterator: %d", kerr];
-                    goto cya;
-                }
+            io_iterator_t iter;
+            io_service_t service = 0;
+            io_registry_entry_t root = IORegistryGetRootEntry(kIOMasterPortDefault);
+            kern_return_t kerr = IORegistryEntryCreateIterator(root, "IOService", kIORegistryIterateRecursively, &iter);
+            
+            if (kerr != KERN_SUCCESS) {
+                IOObjectRelease(iter);
+                returnText = [NSString stringWithFormat:@"Error on IORegistryEntryCreateIterator: %d", kerr];
+                goto cya;
+            }
 
-                CFStringRef edidUUIDKey = CFStringCreateWithCString(kCFAllocatorDefault, "EDID UUID", kCFStringEncodingASCII);
-                CFStringRef locationKey = CFStringCreateWithCString(kCFAllocatorDefault, "Location", kCFStringEncodingASCII);
-                CFStringRef displayAttributesKey = CFStringCreateWithCString(kCFAllocatorDefault, "DisplayAttributes", kCFStringEncodingASCII);
-                CFStringRef externalAVServiceLocation = CFStringCreateWithCString(kCFAllocatorDefault, "External", kCFStringEncodingASCII);
+            CFStringRef edidUUIDKey = CFStringCreateWithCString(kCFAllocatorDefault, "EDID UUID", kCFStringEncodingASCII);
+            CFStringRef locationKey = CFStringCreateWithCString(kCFAllocatorDefault, "Location", kCFStringEncodingASCII);
+            CFStringRef displayAttributesKey = CFStringCreateWithCString(kCFAllocatorDefault, "DisplayAttributes", kCFStringEncodingASCII);
+            CFStringRef externalAVServiceLocation = CFStringCreateWithCString(kCFAllocatorDefault, "External", kCFStringEncodingASCII);
 
-                returnText = @"";
-                
-                int i=1;
-                
-                while ((service = IOIteratorNext(iter)) != MACH_PORT_NULL) {
-                    io_name_t name;
-                    IORegistryEntryGetName(service, name);
-                    if (strcmp(name, "AppleCLCD2") == 0) {
+            returnText = @"";
+            
+            int i=1;
+            bool noMatch = true;
+            
+            while ((service = IOIteratorNext(iter)) != MACH_PORT_NULL) {
+                io_name_t name;
+                IORegistryEntryGetName(service, name);
+                if ( !strcmp(name, "AppleCLCD2") ) {
 
-                        CFStringRef edidUUID = IORegistryEntrySearchCFProperty(service, kIOServicePlane, edidUUIDKey, kCFAllocatorDefault, kIORegistryIterateRecursively);
+                    CFStringRef edidUUID = IORegistryEntrySearchCFProperty(service, kIOServicePlane, edidUUIDKey, kCFAllocatorDefault, kIORegistryIterateRecursively);
 
-                        if ( !(edidUUID == NULL) ) {
+                    if ( !(edidUUID == NULL) ) {
+
+                        if ( !(strcmp(argv[s+2], "list")) || !(strcmp(argv[s+2], "l")) ) {
                         
                             CFDictionaryRef displayAttrs = IORegistryEntrySearchCFProperty(service, kIOServicePlane, displayAttributesKey, kCFAllocatorDefault, kIORegistryIterateRecursively);
                                                     
-                            if (displayAttrs) {
+                            if (displayAttrs ) {
                                 NSDictionary* displayAttrsNS = (NSDictionary*)displayAttrs;
                                 NSDictionary* productAttrs = [displayAttrsNS objectForKey:@"ProductAttributes"];
                                 if (productAttrs) {
                                     returnText = [NSString stringWithFormat:@"%@%i - %@", returnText, i, [productAttrs objectForKey:@"ProductName"]];
                                 }
                             }
-
-                            returnText = [NSString stringWithFormat:@"%@\n", returnText];
-                            i++;
-                            
+                            returnText = [NSString stringWithFormat:@"%@ (%@)\n", returnText, edidUUID];
+    
                         }
                         
+                        if ( atoi(argv[s+2]) == i ) {
+                            
+                            s=2;
+                            
+                            while ((service = IOIteratorNext(iter)) != MACH_PORT_NULL) {
+                                io_name_t name;
+                                IORegistryEntryGetName(service, name);
+                                if ( !strcmp(name, "DCPAVServiceProxy") ) {
+                                
+                                    avService = IOAVServiceCreateWithService(kCFAllocatorDefault, service);
+                                    CFStringRef location = IORegistryEntrySearchCFProperty(service, kIOServicePlane, locationKey, kCFAllocatorDefault, kIORegistryIterateRecursively);
+
+                                    if ( !( location == NULL || !avService || CFStringCompare(externalAVServiceLocation, location, 0) ) ) {
+                                        noMatch = false;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        i++;
+                        
                     }
-                    
                 }
-                
+            }
+
+            if ( !(strcmp(argv[s+2], "list")) || !(strcmp(argv[s+2], "l")) ) {
+            
                 returnValue = 0;
                 goto cya;
                 
-            } else {
+            } else if ( noMatch ) {
+                
+                returnText = @"The specified display does not exist. Use 'display list' to list displays and use it's number (1, 2...) to specify display!\n";
+                returnValue = 0;
+                goto cya;
 
-                s=2; // Display selector should be present shift argument order by two
-                
-                if ( !(argc >= s+3) ) {
-                    
-                    returnText = [NSString stringWithFormat:@"Insufficient number of arguments! Enter 'm1ddc help' for help!\n"];
-                    goto cya;
-                    
-                }
-                
             }
+            
+        } else {
+            
+            avService = IOAVServiceCreate(kCFAllocatorDefault);
             
         }
         
@@ -143,7 +171,7 @@ int main(int argc, char** argv) {
         else if ( !(strcmp(argv[s+2], "standby")) || !(strcmp(argv[s+2], "s"))  ) { data[2] = STANDBY; }
         else {
             
-            returnText = [NSString stringWithFormat:@"Use 'brightness', 'contrast', 'volume' or 'mute' as second parameter! Enter 'm1ddc help' for help!\n"];
+            returnText = @"Use 'brightness', 'contrast', 'volume' or 'mute' as second parameter! Enter 'm1ddc help' for help!\n";
             goto cya;
             
         }
@@ -152,22 +180,10 @@ int main(int argc, char** argv) {
         signed char maxValue=-1;
         
         IOReturn err;
-        IOAVServiceRef avService;
-        
-        if ( s == 2 ) {
-            
-            // TODO: This should be rewritten to use IOAVServiceCreateWithService to select proper display in case a specific display is set
-            avService = IOAVServiceCreate(kCFAllocatorDefault);
-
-        } else {
-
-            avService = IOAVServiceCreate(kCFAllocatorDefault);
-
-        }
         
         if (!avService) {
             
-            returnText = @"Could not find a suitable external display connected to an M1 Mac. :(!\n";
+            returnText = @"Could not find a suitable external display.\n";
             goto cya;
             
         }

@@ -2,6 +2,8 @@
 
 This little tool controls external displays (connected via USB-C/DisplayPort Alt Mode) using DDC/CI on M1 Macs. Useful to embed in various scripts.
 
+*Please note that controlling a HDMI display thourhg the 2020 M1 Mini's HDMI port is not working. You have to use DisplayPort over USB-C!*
+
 ## Prerequisites
 
 You need `clang` from Apple's Command Line Tools (installs automatically if not present).
@@ -18,11 +20,15 @@ You can then run the app by entering:
 
 ## Usage examples:
 
-`m1ddc set contrast 5` - Sets contrast to 5
+`m1ddc set contrast 5` - Sets contrast to 5 on default display
 
-`m1ddc get brightness` - Returns current brightness
+`m1ddc get brightness` - Returns current brightness on default display
 
-`m1ddc chg volume -10` - Decreases volume by 10
+`m1ddc chg volume -10` - Decreases volume by 10 on default display
+
+`m1ddc display list` - Lists displays
+
+`m1ddc display 1 set volume 50` - Sets volume to 50 on Display 1
 
 ## Paramteres:
 
@@ -48,11 +54,15 @@ You can then run the app by entering:
 
 `max volume` - Returns maximum volume (if supported by the display, usually 100).
 
-`chg brightness n` - Change brightness by n and returns the current value (requires current and max reading support).
+`chg brightness n` - Changes brightness by n and returns the current value (requires current and max reading support).
 
-`chg contrast n` - Change contrast by n and returns the current value (requires current and max reading support).
+`chg contrast n` - Changes contrast by n and returns the current value (requires current and max reading support).
 
-`chg volume n` - Change volume by n and returns the current value (requires current and max reading support).
+`chg volume n` - Changes volume by n and returns the current value (requires current and max reading support).
+
+`display list` - Lists displays.
+
+`display n` - Chooses which display to control (use number 1, 2 etc.)
 
 You can also use 'b', 'c' and 'v' instead of 'brightness', 'contrast', 'volume'.
 
