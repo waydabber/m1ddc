@@ -4,7 +4,6 @@
 
 typedef CFTypeRef IOAVServiceRef;
 extern IOAVServiceRef IOAVServiceCreate(CFAllocatorRef allocator);
-extern IOReturn IOAVServiceCopyEDID(IOAVServiceRef service, CFDataRef* x2);
 extern IOReturn IOAVServiceReadI2C(IOAVServiceRef service, uint32_t chipAddress, uint32_t offset, void* outputBuffer, uint32_t outputBufferSize);
 extern IOReturn IOAVServiceWriteI2C(IOAVServiceRef service, uint32_t chipAddress, uint32_t dataAddress, void* inputBuffer, uint32_t inputBufferSize);
 
@@ -12,9 +11,11 @@ extern IOReturn IOAVServiceWriteI2C(IOAVServiceRef service, uint32_t chipAddress
 #define CONTRAST 0x12
 #define VOLUME 0x62
 #define MUTE 0x8D
+#define INPUT 0x60
+#define STANDBY 0xD6
 
-#define DDC_WAIT 15000
-#define DDC_ITERATIONS 3
+#define DDC_WAIT 10000 // depending on display this must be set to as high as 50000
+#define DDC_ITERATIONS 3 // depending on display this must be set higher
 
 int main(int argc, char** argv) {
     
@@ -26,7 +27,7 @@ int main(int argc, char** argv) {
     " m1ddc get brightness - Returns current brightness\n"
     " m1ddc chg volume -10 - Decreases volume by 10\n"
     "\n"
-    "Paramteres:\n"
+    "Commands:\n"
     "\n"
     " set brightness n     - Sets brightness to n, where n is a number between 0 and the maximum value (usually 100).\n"
     " set contrast n       - Sets contrast to n, where n is a number between 0 and the maximum value (usually 100).\n"
@@ -70,6 +71,8 @@ int main(int argc, char** argv) {
         else if ( !(strcmp(argv[2], "contrast")) || !(strcmp(argv[2], "c"))  ) { data[2] = CONTRAST; }
         else if ( !(strcmp(argv[2], "volume")) || !(strcmp(argv[2], "v"))  ) { data[2] = VOLUME; }
         else if ( !(strcmp(argv[2], "mute")) || !(strcmp(argv[2], "m"))  ) { data[2] = MUTE; }
+        else if ( !(strcmp(argv[2], "input")) || !(strcmp(argv[2], "i"))  ) { data[2] = INPUT; }
+        else if ( !(strcmp(argv[2], "standby")) || !(strcmp(argv[2], "s"))  ) { data[2] = STANDBY; }
         else {
             
             returnText = [NSString stringWithFormat:@"Use 'brightness', 'contrast', 'volume' or 'mute' as second parameter! Enter 'm1ddc help' for help!\n"];
