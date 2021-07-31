@@ -2,7 +2,7 @@
 
 This little tool controls external displays (connected via USB-C/DisplayPort Alt Mode) using DDC/CI on M1 Macs. Useful to embed in various scripts.
 
-*Please note that controlling a HDMI display thourhg the 2020 M1 Mini's HDMI port is not working. You have to use DisplayPort over USB-C!*
+*Please note that controlling a HDMI display via the 2020 M1 Mini's HDMI port is not working. You have to use DisplayPort over USB-C!*
 
 ## Prerequisites
 
