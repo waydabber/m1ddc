@@ -22,7 +22,7 @@ int main(int argc, char** argv) {
     
     IOAVServiceRef avService;
     
-    NSString *returnText =@"Controls volume, brightness, contrast of a single external Display connected via USB-C (DisplayPort Alt Mode) over DDC on an M1 Mac.\n"
+    NSString *returnText =@"Controls volume, brightness, contrast, input of a single external Display connected via USB-C (DisplayPort Alt Mode) over DDC on an M1 Mac.\n"
     "Control of displays attached via the HDMI port or by other means is not currently supported.\n"
     "\n"
     "Example usages:\n"
@@ -37,6 +37,8 @@ int main(int argc, char** argv) {
     " set brightness n - Sets brightness to n, where n is a number between 0 and the maximum value (usually 100).\n"
     " set contrast n   - Sets contrast to n, where n is a number between 0 and the maximum value (usually 100).\n"
     " set volume n     - Sets volume to n, where n is a number between 0 and the maximum value (usually 100).\n"
+    " set input n      - Sets input source to n, common values include:\n"
+    "                    DisplayPort 1: 15, DisplayPort 2: 16, HDMI 1: 17 HDMI 2: 18, USB-C: 27.\n"
     "\n"
     " set mute on      - Sets mute on (you can use 1 instead of 'on')\n"
     " set mute off     - Sets mute off (you can use 2 instead of 'off')\n"
@@ -233,13 +235,13 @@ int main(int argc, char** argv) {
 
             if ( !(strcmp(argv[s+1], "get")) ) {
 
-                returnText = [NSString stringWithFormat:@"%i", curValue];
+                returnText = [NSString stringWithFormat:@"%i\n", curValue];
                 returnValue = 0;
                 goto cya;
 
             } else if ( !(strcmp(argv[s+1], "max")) ) {
                 
-                returnText = [NSString stringWithFormat:@"%i", maxValue];
+                returnText = [NSString stringWithFormat:@"%i\n", maxValue];
                 returnValue = 0;
                 goto cya;
 
@@ -294,7 +296,7 @@ int main(int argc, char** argv) {
 
             if ( !(strcmp(argv[s+1], "chg")) ) {
 
-                returnText = [NSString stringWithFormat:@"%i", setValue];
+                returnText = [NSString stringWithFormat:@"%i\n", setValue];
                 returnValue = 0;
                 goto cya;
 
