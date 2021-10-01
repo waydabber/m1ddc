@@ -48,17 +48,17 @@ int main(int argc, char** argv) {
     " set mute on             - Sets mute on (you can use 1 instead of 'on')\n"
     " set mute off            - Sets mute off (you can use 2 instead of 'off')\n"
     "\n"
-    " get luminance          - Returns current luminance (if supported by the display).\n"
+    " get luminance           - Returns current luminance (if supported by the display).\n"
     " get contrast            - Returns current contrast (if supported by the display).\n"
     " get (red,green,blue)    - Returns current color gain (if supported by the display).\n"
     " get volume              - Returns current volume (if supported by the display).\n"
     "\n"
-    " max luminance         - Returns maximum luminance (if supported by the display, usually 100).\n"
+    " max luminance           - Returns maximum luminance (if supported by the display, usually 100).\n"
     " max contrast            - Returns maximum contrast (if supported by the display, usually 100).\n"
     " max (red,green,blue)    - Returns maximum color gain (if supported by the display, usually 100).\n"
     " max volume              - Returns maximum volume (if supported by the display, usually 100).\n"
     "\n"
-    " chg luminance n        - Changes luminance by n and returns the current value (requires current and max reading support).\n"
+    " chg luminance n         - Changes luminance by n and returns the current value (requires current and max reading support).\n"
     " chg contrast n          - Changes contrast by n and returns the current value (requires current and max reading support).\n"
     " chg (red,green,blue) n  - Changes color gain by n and returns the current value (requires current and max reading support).\n"
     " chg volume n            - Changes volume by n and returns the current value (requires current and max reading support).\n"
@@ -182,7 +182,6 @@ int main(int argc, char** argv) {
         else if ( !(strcmp(argv[s+2], "red")) || !(strcmp(argv[s+2], "r")) ) { data[2] = RED; }
         else if ( !(strcmp(argv[s+2], "green")) || !(strcmp(argv[s+2], "g")) ) { data[2] = GREEN; }
         else if ( !(strcmp(argv[s+2], "blue")) || !(strcmp(argv[s+2], "b")) ) { data[2] = BLUE; }
-        else if ( !(strcmp(argv[s+2], "satblue")) ) { data[2] = SAT_BLUE; }
         else {
 
             returnText = @"Use 'luminance', 'contrast', 'volume' or 'mute' as second parameter! Enter 'm1ddc help' for help!\n";
