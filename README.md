@@ -34,7 +34,7 @@ You can then run the app by entering:
 
 ## Commands:
 
-`set luminance n ` - Sets luminance ("brightness") to n, where n is a number between 0 and the maximum value (usually 100).
+`set luminance n` - Sets luminance ("brightness") to n, where n is a number between 0 and the maximum value (usually 100).
 
 `set contrast n` - Sets contrast to n, where n is a number between 0 and the maximum value (usually 100).
 
