@@ -14,9 +14,9 @@ extern IOReturn IOAVServiceWriteI2C(IOAVServiceRef service, uint32_t chipAddress
 #define MUTE 0x8D
 #define INPUT 0x60
 #define STANDBY 0xD6
-#define RED 0x16 // VCP Code: Video Gain (Drive): Red
-#define GREEN 0x18 // VCP Code: Video Gain (Drive): Green
-#define BLUE 0x1A // VCP Code: Video Gain (Drive): Blue
+#define RED 0x16 // VCP Code - Video Gain (Drive): Red
+#define GREEN 0x18 // VCP Code - Video Gain (Drive): Green
+#define BLUE 0x1A // VCP Code - Video Gain (Drive): Blue
 
 #define DDC_WAIT 10000 // depending on display this must be set to as high as 50000
 #define DDC_ITERATIONS 2 // depending on display this must be set higher
@@ -28,12 +28,13 @@ int main(int argc, char** argv) {
     NSString *returnText =@"Controls volume, luminance (brightness), contrast, color gain, input of a single external Display connected via USB-C (DisplayPort Alt Mode) over DDC on an M1 Mac.\n"
     "Control of displays attached via the HDMI port or by other means is not currently supported.\n"
     "\n"
-    "Example usages:\n"
+    "Usage examples:\n"
     "\n"
     " m1ddc set contrast 5          - Sets contrast to 5\n"
     " m1ddc get luminance           - Returns current luminance\n"
     " m1ddc set red 90              - Sets red gain to 90\n"
     " m1ddc chg volume -10          - Decreases volume by 10\n"
+    " m1ddc display list            - Lists displays\n"
     " m1ddc display 1 set volume 50 - Sets volume to 50 on Display 1\n"
     "\n"
     "Commands:\n"
