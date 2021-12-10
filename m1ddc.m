@@ -81,7 +81,7 @@ int main(int argc, char** argv) {
 
             io_iterator_t iter;
             io_service_t service = 0;
-            io_registry_entry_t root = IORegistryGetRootEntry(kIOMasterPortDefault);
+            io_registry_entry_t root = IORegistryGetRootEntry(kIOMainPortDefault);
             kern_return_t kerr = IORegistryEntryCreateIterator(root, "IOService", kIORegistryIterateRecursively, &iter);
 
             if (kerr != KERN_SUCCESS) {
