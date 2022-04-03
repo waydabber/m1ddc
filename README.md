@@ -32,6 +32,8 @@ You can then run the app by entering:
 
 `m1ddc display 1 set volume 50` - Sets volume to 50 on Display 1
 
+`m1ddc display 10ACB8A0-0000-0000-1419-0104A2435078 set input 15` - Sets input to DisplayPort 1 on display with UUID 10ACB8A0-0000-0000-1419-0104A2435078
+
 ## Commands:
 
 `set luminance n` - Sets luminance ("brightness") to n, where n is a number between 0 and the maximum value (usually 100).

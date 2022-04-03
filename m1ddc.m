@@ -124,7 +124,7 @@ int main(int argc, char** argv) {
 
                         }
 
-                        if ( atoi(argv[s+2]) == i ) {
+                        if ( atoi(argv[s+2]) == i || CFEqual(CFStringCreateWithCString(kCFAllocatorDefault, argv[s+2], kCFStringEncodingASCII), edidUUID) ) {
 
                             s=2;
 
