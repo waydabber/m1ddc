@@ -79,6 +79,11 @@ int main(int argc, char** argv) {
 
         if ( !(strcmp(argv[s+1], "display")) ) {
 
+            if (argc == 4) {
+                returnText = @"No command specified. Please use `list` to list displays, or specify a display number to control\n";
+                goto cya;
+            }
+
             io_iterator_t iter;
             io_service_t service = 0;
             io_registry_entry_t root = IORegistryGetRootEntry(kIOMainPortDefault);
