@@ -2,7 +2,7 @@
 
 This little tool controls external displays (connected via USB-C/DisplayPort Alt Mode) using DDC/CI on M1 Macs. Useful to embed in various scripts.
 
-*Please note that controlling a HDMI display via the 2020 M1 Mini's HDMI port is not working. You have to use DisplayPort over USB-C!*
+*Please note that this tool does not support the HDMI port of the 2020 M1/M2 Mini and does not support M2 Pro Macs either (the USB-C ports of entry level M2 macs are supported). This tool does not support Intel Macs either. You can use [BetterDisplay](https://github.com/waydabber/BetterDisplay#readme) for free DDC control on all Macs and all ports..*
 
 ## Prerequisites
 
