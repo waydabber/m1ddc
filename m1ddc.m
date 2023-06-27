@@ -13,6 +13,7 @@ extern IOReturn IOAVServiceWriteI2C(IOAVServiceRef service, uint32_t chipAddress
 #define VOLUME 0x62
 #define MUTE 0x8D
 #define INPUT 0x60
+#define INPUT_ALT 0xF4 // alternate address, used for LG exclusively?
 #define STANDBY 0xD6
 #define RED 0x16 // VCP Code - Video Gain (Drive): Red
 #define GREEN 0x18 // VCP Code - Video Gain (Drive): Green
@@ -45,6 +46,8 @@ int main(int argc, char** argv) {
     " set volume n            - Sets volume to n, where n is a number between 0 and the maximum value (usually 100).\n"
     " set input n             - Sets input source to n, common values include:\n"
     "                           DisplayPort 1: 15, DisplayPort 2: 16, HDMI 1: 17 HDMI 2: 18, USB-C: 27.\n"
+    " set input-alt n         - Sets input source to n (using alternate addressing, as used by LG), common values include:\n"
+    "                           DisplayPort 1: 208, DisplayPort 2: 209, HDMI 1: 144 HDMI 2: 145, USB-C / DP 3: 210.\n"
     "\n"
     " set mute on             - Sets mute on (you can use 1 instead of 'on')\n"
     " set mute off            - Sets mute off (you can use 2 instead of 'off')\n"
@@ -179,11 +182,14 @@ int main(int argc, char** argv) {
         UInt8 data[256];
         memset(data, 0, sizeof(data));
 
+        UInt8 inputAddr = 0x51;
+
         if ( !(strcmp(argv[s+2], "luminance")) || !(strcmp(argv[s+2], "l")) ) { data[2] = LUMINANCE; }
         else if ( !(strcmp(argv[s+2], "contrast")) || !(strcmp(argv[s+2], "c"))  ) { data[2] = CONTRAST; }
         else if ( !(strcmp(argv[s+2], "volume")) || !(strcmp(argv[s+2], "v"))  ) { data[2] = VOLUME; }
         else if ( !(strcmp(argv[s+2], "mute")) || !(strcmp(argv[s+2], "m"))  ) { data[2] = MUTE; }
         else if ( !(strcmp(argv[s+2], "input")) || !(strcmp(argv[s+2], "i"))  ) { data[2] = INPUT; }
+        else if ( !(strcmp(argv[s+2], "input-alt")) || !(strcmp(argv[s+2], "I"))  ) { data[2] = INPUT_ALT; inputAddr = 0x50; }
         else if ( !(strcmp(argv[s+2], "standby")) || !(strcmp(argv[s+2], "s"))  ) { data[2] = STANDBY; }
         else if ( !(strcmp(argv[s+2], "red")) || !(strcmp(argv[s+2], "r")) ) { data[2] = RED; }
         else if ( !(strcmp(argv[s+2], "green")) || !(strcmp(argv[s+2], "g")) ) { data[2] = GREEN; }
@@ -300,7 +306,7 @@ int main(int argc, char** argv) {
             for (int i = 0; i <= DDC_ITERATIONS; i++) {
 
                 usleep(DDC_WAIT);
-                err = IOAVServiceWriteI2C(avService, 0x37, 0x51, data, 6);
+                err = IOAVServiceWriteI2C(avService, 0x37, inputAddr, data, 6);
 
                 if (err) {
 

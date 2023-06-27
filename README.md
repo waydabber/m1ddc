@@ -47,6 +47,9 @@ You can then run the app by entering:
 `set input n` - Sets input source to n, common values include:<br/>
 DisplayPort 1: 15, DisplayPort 2: 16, HDMI 1: 17 HDMI 2: 18, USB-C: 27.
 
+`set input-alt n` - Sets input source to n (using alternate addressing, as used by LG), common values include:<br/>
+DisplayPort 1: 208, DisplayPort 2: 209, HDMI 1: 144 HDMI 2: 145, USB-C / DP 3: 210.
+
 `set mute on` - Sets mute on (you can use 1 instead of 'on')
 
 `set mute off` - Sets mute off (you can use 2 instead of 'off')
