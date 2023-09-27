@@ -18,6 +18,8 @@ extern IOReturn IOAVServiceWriteI2C(IOAVServiceRef service, uint32_t chipAddress
 #define RED 0x16 // VCP Code - Video Gain (Drive): Red
 #define GREEN 0x18 // VCP Code - Video Gain (Drive): Green
 #define BLUE 0x1A // VCP Code - Video Gain (Drive): Blue
+#define PBP_INPUT 0xE8
+#define PBP 0xE9
 
 #define DDC_WAIT 10000 // depending on display this must be set to as high as 50000
 #define DDC_ITERATIONS 2 // depending on display this must be set higher
@@ -45,12 +47,17 @@ int main(int argc, char** argv) {
     " set (red,green,blue) n  - Sets selected color channel gain to n, where n is a number between 0 and the maximum value (usually 100).\n"
     " set volume n            - Sets volume to n, where n is a number between 0 and the maximum value (usually 100).\n"
     " set input n             - Sets input source to n, common values include:\n"
-    "                           DisplayPort 1: 15, DisplayPort 2: 16, HDMI 1: 17 HDMI 2: 18, USB-C: 27.\n"
+    "                           DisplayPort 1: 15, DisplayPort 2: 16, HDMI 1: 17, HDMI 2: 18, USB-C: 27.\n"
     " set input-alt n         - Sets input source to n (using alternate addressing, as used by LG), common values include:\n"
-    "                           DisplayPort 1: 208, DisplayPort 2: 209, HDMI 1: 144 HDMI 2: 145, USB-C / DP 3: 210.\n"
+    "                           DisplayPort 1: 208, DisplayPort 2: 209, HDMI 1: 144, HDMI 2: 145, USB-C / DP 3: 210.\n"
     "\n"
     " set mute on             - Sets mute on (you can use 1 instead of 'on')\n"
     " set mute off            - Sets mute off (you can use 2 instead of 'off')\n"
+    "\n"
+    " set pbp n               - Switches PIP/PBP on certain Dell screens (e.g. U3421W), possible values:\n"
+    "                           off: 0, small window: 33, large window: 34, 50/50 split: 36, 26/74 split: 43, 74/26 split: 44.\n"
+    " set pbp-input n         - Sets second PIP/PBP input on certain Dell screens, possible values:\n"
+    "                           DisplayPort 1: 15, DisplayPort 2: 16, HDMI 1: 17, HDMI 2: 18.\n"
     "\n"
     " get luminance           - Returns current luminance (if supported by the display).\n"
     " get contrast            - Returns current contrast (if supported by the display).\n"
@@ -194,6 +201,8 @@ int main(int argc, char** argv) {
         else if ( !(strcmp(argv[s+2], "red")) || !(strcmp(argv[s+2], "r")) ) { data[2] = RED; }
         else if ( !(strcmp(argv[s+2], "green")) || !(strcmp(argv[s+2], "g")) ) { data[2] = GREEN; }
         else if ( !(strcmp(argv[s+2], "blue")) || !(strcmp(argv[s+2], "b")) ) { data[2] = BLUE; }
+        else if ( !(strcmp(argv[s+2], "pbp")) || !(strcmp(argv[s+2], "p")) ) { data[2] = PBP; }
+        else if ( !(strcmp(argv[s+2], "pbp-input")) || !(strcmp(argv[s+2], "pi")) ) { data[2] = PBP_INPUT; }
         else {
 
             returnText = @"Use 'luminance', 'contrast', 'volume' or 'mute' as second parameter! Enter 'm1ddc help' for help!\n";
