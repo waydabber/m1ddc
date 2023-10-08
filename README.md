@@ -55,7 +55,7 @@ DisplayPort 1: 208, DisplayPort 2: 209, HDMI 1: 144, HDMI 2: 145, USB-C / DP 3: 
 `set mute off` - Sets mute off (you can use 2 instead of 'off')
 
 `set pbp n` - Switches PIP/PBP on certain Dell screens (e.g. U3421WE), possible values:<br/>
-off: 0, small window: 33, large window: 34, 50/50 split: 36, 26/74 split: 43, 74/26 split: 44.
+off: 0, toggle window size: 1, toggle window position: 2, small window: 33, large window: 34, 50/50 split: 36, 26/74 split: 43, 74/26 split: 44.
 
 `set pbp-input n` - Sets second PIP/PBP input on certain Dell screens, possible values:<br/>
 DisplayPort 1: 15, DisplayPort 2: 16, HDMI 1: 17, HDMI 2: 18.
