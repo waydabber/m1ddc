@@ -28,8 +28,8 @@ int main(int argc, char** argv) {
 
     IOAVServiceRef avService;
 
-    NSString *returnText =@"Controls volume, luminance (brightness), contrast, color gain, input of a single external Display connected via USB-C (DisplayPort Alt Mode) over DDC on an M1 Mac.\n"
-    "Control of displays attached via the HDMI port or by other means is not currently supported.\n"
+    NSString *returnText =@"Controls volume, luminance (brightness), contrast, color gain, input of an external Display connected via USB-C (DisplayPort Alt Mode) over DDC on an Apple Silicon Mac.\n"
+    "Displays attached via the built-in HDMI port of M1 or entry level M2 Macs are not supported.\n"
     "\n"
     "Usage examples:\n"
     "\n"
@@ -118,7 +118,7 @@ int main(int argc, char** argv) {
             while ((service = IOIteratorNext(iter)) != MACH_PORT_NULL) {
                 io_name_t name;
                 IORegistryEntryGetName(service, name);
-                if ( !strcmp(name, "AppleCLCD2") ) {
+                if ( !strcmp(name, "AppleCLCD2") || !strcmp(name, "IOMobileFramebufferShim") ) {
 
                     CFStringRef edidUUID = IORegistryEntrySearchCFProperty(service, kIOServicePlane, edidUUIDKey, kCFAllocatorDefault, kIORegistryIterateRecursively);
 
