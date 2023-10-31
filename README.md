@@ -2,7 +2,7 @@
 
 This little tool controls external displays (connected via USB-C/DisplayPort Alt Mode) using DDC/CI on Apple Silicon Macs. Useful to embed in various scripts.
 
-*Please note that this tool does not support the built-in HDMI port of M1 and entry level M2 Macs. This tool does not support Intel Macs. You can use [BetterDisplay](https://github.com/waydabber/BetterDisplay#readme) for free DDC control on all Macs and all ports..*
+*Please note that this tool does not support the built-in HDMI port of M1 and entry level M2 Macs. This tool does not support Intel Macs. You can use [BetterDisplay](https://github.com/waydabber/BetterDisplay#readme) for free DDC control on all Macs and all ports.*
 
 ## Prerequisites
 
@@ -102,7 +102,7 @@ https://gist.github.com/waydabber/3241fc146cef65131a42ce30e4b6eab7
 
 If you like m1ddc, you'll like [BetterDisplay](https://betterdisplay.pro) even better!
 
-If you need a complete Swift implementation for DDC control on Apple Silicon macs, you can take a look at [arm64DDC](https://github.com/MonitorControl/MonitorControl/blob/master/MonitorControl/Support/Arm64DDC.swift) which is a complete self contained library I made for BetterDisplay and MonitorControl.
+If you need a complete Swift implementation for DDC control on Apple Silicon macs, you can take a look at [AppleSiliconDDC]([https://github.com/MonitorControl/MonitorControl/blob/master/MonitorControl/Support/Arm64DDC.swift](https://github.com/waydabber/AppleSiliconDDC)) which is a complete self contained library I made for BetterDisplay (note: some features and M1 HDMI support is missing from the open source code) and MonitorControl.
 
 ## Thanks
 
