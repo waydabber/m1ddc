@@ -1,6 +1,7 @@
 @import Darwin;
 @import Foundation;
 @import IOKit;
+@import CoreGraphics;
 
 typedef CFTypeRef IOAVServiceRef;
 extern IOAVServiceRef IOAVServiceCreate(CFAllocatorRef allocator);
@@ -24,11 +25,26 @@ extern IOReturn IOAVServiceWriteI2C(IOAVServiceRef service, uint32_t chipAddress
 #define DDC_WAIT 10000 // depending on display this must be set to as high as 50000
 #define DDC_ITERATIONS 2 // depending on display this must be set higher
 
-int main(int argc, char** argv) {
 
-    IOAVServiceRef avService;
+struct MainData {
+	IOAVServiceRef avService;
+	UInt8 data[256];
+	UInt8 inputAddr;
+	signed char curValue;
+	signed char maxValue;
+	int shift;
+	int argc;
+	char** argv;
+}; 
 
-    NSString *returnText =@"Controls volume, luminance (brightness), contrast, color gain, input of an external Display connected via USB-C (DisplayPort Alt Mode) over DDC on an Apple Silicon Mac.\n"
+// -- Generic utility functions
+
+void writeToStdOut(NSString *text) {
+    [text writeToFile:@"/dev/stdout" atomically:NO encoding:NSUTF8StringEncoding error:nil];
+}
+
+void printUsage() {
+    writeToStdOut(@"Controls volume, luminance (brightness), contrast, color gain, input of an external Display connected via USB-C (DisplayPort Alt Mode) over DDC on an Apple Silicon Mac.\n"
     "Displays attached via the built-in HDMI port of M1 or entry level M2 Macs are not supported.\n"
     "\n"
     "Usage examples:\n"
@@ -77,279 +93,356 @@ int main(int argc, char** argv) {
     " display list            - Lists displays.\n"
     " display n               - Chooses which display to control (use number 1, 2 etc.)\n"
     "\n"
-    "You can also use 'l', 'v' instead of 'luminance', 'volume' etc.\n"
-    ;
-    int returnValue = 1;
+    "You can also use 'l', 'v' instead of 'luminance', 'volume' etc.\n");
+}
 
-    if (argc >= 3) {
 
-        // Display lister and selection
+// -- IORegistry related
 
-        int s=0; // Indicate the presence of display selection (+ messy argument shifter...)
+kern_return_t createIORegistryIterator(io_iterator_t* iter) {
+    io_registry_entry_t root = IORegistryGetRootEntry(kIOMainPortDefault);
+    kern_return_t kerr = IORegistryEntryCreateIterator(root, "IOService", kIORegistryIterateRecursively, iter);
+    if (kerr != KERN_SUCCESS) {
+        IOObjectRelease(*iter);
+    }
+    return kerr;
+}
 
-        if ( !(strcmp(argv[s+1], "display")) ) {
+CFTypeRef getCFStringRef(io_service_t service, char* key) {
+    CFStringRef cfstring = CFStringCreateWithCString(kCFAllocatorDefault, key, kCFStringEncodingASCII);
+    return IORegistryEntrySearchCFProperty(service, kIOServicePlane, cfstring, kCFAllocatorDefault, kIORegistryIterateRecursively);
+}
 
-            if (argc == 4) {
-                returnText = @"No command specified. Please use `list` to list displays, or specify a display number to control\n";
-                goto cya;
-            }
 
-            io_iterator_t iter;
-            io_service_t service = 0;
-            io_registry_entry_t root = IORegistryGetRootEntry(kIOMainPortDefault);
-            kern_return_t kerr = IORegistryEntryCreateIterator(root, "IOService", kIORegistryIterateRecursively, &iter);
+// -- AVService related
 
-            if (kerr != KERN_SUCCESS) {
-                IOObjectRelease(iter);
-                returnText = [NSString stringWithFormat:@"Error on IORegistryEntryCreateIterator: %d", kerr];
-                goto cya;
-            }
-
-            CFStringRef edidUUIDKey = CFStringCreateWithCString(kCFAllocatorDefault, "EDID UUID", kCFStringEncodingASCII);
-            CFStringRef locationKey = CFStringCreateWithCString(kCFAllocatorDefault, "Location", kCFStringEncodingASCII);
-            CFStringRef displayAttributesKey = CFStringCreateWithCString(kCFAllocatorDefault, "DisplayAttributes", kCFStringEncodingASCII);
-            CFStringRef externalAVServiceLocation = CFStringCreateWithCString(kCFAllocatorDefault, "External", kCFStringEncodingASCII);
-
-            returnText = @"";
-
-            int i=1;
-            bool noMatch = true;
-
-            while ((service = IOIteratorNext(iter)) != MACH_PORT_NULL) {
-                io_name_t name;
-                IORegistryEntryGetName(service, name);
-                if ( !strcmp(name, "AppleCLCD2") || !strcmp(name, "IOMobileFramebufferShim") ) {
-
-                    CFStringRef edidUUID = IORegistryEntrySearchCFProperty(service, kIOServicePlane, edidUUIDKey, kCFAllocatorDefault, kIORegistryIterateRecursively);
-
-                    if ( !(edidUUID == NULL) ) {
-
-                        if ( !(strcmp(argv[s+2], "list")) || !(strcmp(argv[s+2], "l")) ) {
-
-                            CFDictionaryRef displayAttrs = IORegistryEntrySearchCFProperty(service, kIOServicePlane, displayAttributesKey, kCFAllocatorDefault, kIORegistryIterateRecursively);
-
-                            if (displayAttrs ) {
-                                NSDictionary* displayAttrsNS = (NSDictionary*)displayAttrs;
-                                NSDictionary* productAttrs = [displayAttrsNS objectForKey:@"ProductAttributes"];
-                                if (productAttrs) {
-                                    returnText = [NSString stringWithFormat:@"%@%i - %@", returnText, i, [productAttrs objectForKey:@"ProductName"]];
-                                }
-                            }
-                            returnText = [NSString stringWithFormat:@"%@ (%@)\n", returnText, edidUUID];
-
-                        }
-
-                        if ( atoi(argv[s+2]) == i || CFEqual(CFStringCreateWithCString(kCFAllocatorDefault, argv[s+2], kCFStringEncodingASCII), edidUUID) ) {
-
-                            s=2;
-
-                            while ((service = IOIteratorNext(iter)) != MACH_PORT_NULL) {
-                                io_name_t name;
-                                IORegistryEntryGetName(service, name);
-                                if ( !strcmp(name, "DCPAVServiceProxy") ) {
-
-                                    avService = IOAVServiceCreateWithService(kCFAllocatorDefault, service);
-                                    CFStringRef location = IORegistryEntrySearchCFProperty(service, kIOServicePlane, locationKey, kCFAllocatorDefault, kIORegistryIterateRecursively);
-
-                                    if ( !( location == NULL || !avService || CFStringCompare(externalAVServiceLocation, location, 0) ) ) {
-                                        noMatch = false;
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-
-                        i++;
-
-                    }
-                }
-            }
-
-            if ( !(strcmp(argv[s+2], "list")) || !(strcmp(argv[s+2], "l")) ) {
-
-                returnValue = 0;
-                goto cya;
-
-            } else if ( noMatch ) {
-
-                returnText = @"The specified display does not exist. Use 'display list' to list displays and use it's number (1, 2...) to specify display!\n";
-                returnValue = 0;
-                goto cya;
-
-            }
-
-        } else {
-
-            avService = IOAVServiceCreate(kCFAllocatorDefault);
-
+NSString* getDisplayIdentifier(io_service_t service, CFStringRef edidUUID) {
+    NSString *productIdentifier = (NSString *)edidUUID;
+    CFDictionaryRef displayAttrs = getCFStringRef(service, "DisplayAttributes");
+    if (displayAttrs) {
+        NSDictionary* displayAttrsNS = (NSDictionary*)displayAttrs;
+        NSDictionary* productAttrs = [displayAttrsNS objectForKey:@"ProductAttributes"];
+        if (productAttrs) {
+            productIdentifier = [NSString stringWithFormat:@"%@:%@", [productAttrs objectForKey:@"AlphanumericSerialNumber"], productIdentifier];
         }
+    }
+    return productIdentifier;
+}
 
-        // Get ready for DDC operations
 
-        UInt8 data[256];
-        memset(data, 0, sizeof(data));
-
-        UInt8 inputAddr = 0x51;
-
-        if ( !(strcmp(argv[s+2], "luminance")) || !(strcmp(argv[s+2], "l")) ) { data[2] = LUMINANCE; }
-        else if ( !(strcmp(argv[s+2], "contrast")) || !(strcmp(argv[s+2], "c"))  ) { data[2] = CONTRAST; }
-        else if ( !(strcmp(argv[s+2], "volume")) || !(strcmp(argv[s+2], "v"))  ) { data[2] = VOLUME; }
-        else if ( !(strcmp(argv[s+2], "mute")) || !(strcmp(argv[s+2], "m"))  ) { data[2] = MUTE; }
-        else if ( !(strcmp(argv[s+2], "input")) || !(strcmp(argv[s+2], "i"))  ) { data[2] = INPUT; }
-        else if ( !(strcmp(argv[s+2], "input-alt")) || !(strcmp(argv[s+2], "I"))  ) { data[2] = INPUT_ALT; inputAddr = 0x50; }
-        else if ( !(strcmp(argv[s+2], "standby")) || !(strcmp(argv[s+2], "s"))  ) { data[2] = STANDBY; }
-        else if ( !(strcmp(argv[s+2], "red")) || !(strcmp(argv[s+2], "r")) ) { data[2] = RED; }
-        else if ( !(strcmp(argv[s+2], "green")) || !(strcmp(argv[s+2], "g")) ) { data[2] = GREEN; }
-        else if ( !(strcmp(argv[s+2], "blue")) || !(strcmp(argv[s+2], "b")) ) { data[2] = BLUE; }
-        else if ( !(strcmp(argv[s+2], "pbp")) || !(strcmp(argv[s+2], "p")) ) { data[2] = PBP; }
-        else if ( !(strcmp(argv[s+2], "pbp-input")) || !(strcmp(argv[s+2], "pi")) ) { data[2] = PBP_INPUT; }
-        else {
-
-            returnText = @"Use 'luminance', 'contrast', 'volume' or 'mute' as second parameter! Enter 'm1ddc help' for help!\n";
-            goto cya;
-
+void processDisplayAttributes(io_service_t service, CFStringRef edidUUID, int i) {
+    NSString *productName = @"";
+    CFDictionaryRef displayAttrs = getCFStringRef(service, "DisplayAttributes");
+    if (displayAttrs) {
+        NSDictionary* displayAttrsNS = (NSDictionary*)displayAttrs;
+        NSDictionary* productAttrs = [displayAttrsNS objectForKey:@"ProductAttributes"];
+        if (productAttrs) {
+            productName = [productAttrs objectForKey:@"ProductName"];
         }
+    }
+    writeToStdOut([NSString stringWithFormat:@"[%i] %@ (%@)\n", i, productName, getDisplayIdentifier(service, edidUUID)]);
+}
 
-        signed char curValue=-1;
-        signed char maxValue=-1;
 
-        IOReturn err;
-
-        if (!avService) {
-
-            returnText = @"Could not find a suitable external display.\n";
-            goto cya;
-
+bool processAVService(io_service_t *service, io_iterator_t iter, CFStringRef externalAVServiceLocation, IOAVServiceRef *avService) {
+    while ((*service = IOIteratorNext(iter)) != MACH_PORT_NULL) {
+        io_name_t name;
+        IORegistryEntryGetName(*service, name);
+        if ( !strcmp(name, "DCPAVServiceProxy") ) {
+            *avService = IOAVServiceCreateWithService(kCFAllocatorDefault, *service);
+            CFStringRef location = getCFStringRef(*service, "Location");
+            if ( !( location == NULL || !(*avService) || CFStringCompare(externalAVServiceLocation, location, 0) ) ) {
+                return false;
+            }
         }
+    }
+    return true;
+}
 
-        // Read stuff
+// -- Input value handling
 
-        if ( !(strcmp(argv[s+1], "get")) || !(strcmp(argv[s+1], "max")) || !(strcmp(argv[s+1], "chg")) ) {
+UInt8 dataFromInput(struct MainData *d) {
+	char *arg = d->argv[d->shift + 2];
+    if ( !strcmp(arg, "luminance") || !strcmp(arg, "l") ) { d->data[2] = LUMINANCE; }
+    else if ( !strcmp(arg, "contrast") || !strcmp(arg, "c")  ) { d->data[2] = CONTRAST; }
+    else if ( !strcmp(arg, "volume") || !strcmp(arg, "v")  ) { d->data[2] = VOLUME; }
+    else if ( !strcmp(arg, "mute") || !strcmp(arg, "m")  ) { d->data[2] = MUTE; }
+    else if ( !strcmp(arg, "input") || !strcmp(arg, "i")  ) { d->data[2] = INPUT; }
+    else if ( !strcmp(arg, "input-alt") || !strcmp(arg, "I")  ) { d->data[2] = INPUT_ALT; d->inputAddr = 0x50; }
+    else if ( !strcmp(arg, "standby") || !strcmp(arg, "s")  ) { d->data[2] = STANDBY; }
+    else if ( !strcmp(arg, "red") || !strcmp(arg, "r") ) { d->data[2] = RED; }
+    else if ( !strcmp(arg, "green") || !strcmp(arg, "g") ) { d->data[2] = GREEN; }
+    else if ( !strcmp(arg, "blue") || !strcmp(arg, "b") ) { d->data[2] = BLUE; }
+    else if ( !strcmp(arg, "pbp") || !strcmp(arg, "p") ) { d->data[2] = PBP; }
+    else if ( !strcmp(arg, "pbp-input") || !strcmp(arg, "pi") ) { d->data[2] = PBP_INPUT; }
+    else {
+        return 1;
+    }
+    return 0;
+}
 
-            data[0] = 0x82;
-            data[1] = 0x01;
-            data[3] = 0x6e ^ data[0] ^ data[1] ^ data[2] ^ data[3];
-
-            for (int i = 0; i < DDC_ITERATIONS; ++i) {
-
-                usleep(DDC_WAIT);
-                err = IOAVServiceWriteI2C(avService, 0x37, 0x51, data, 4);
-
-                if (err) {
-
-                    returnText = [NSString stringWithFormat:@"I2C communication failure: %s\n", mach_error_string(err)];
-                    goto cya;
-
-                }
-
-            }
-
-            char i2cBytes[12];
-            memset(i2cBytes, 0, sizeof(i2cBytes));
-
-            usleep(DDC_WAIT);
-            err = IOAVServiceReadI2C(avService, 0x37, 0x51, i2cBytes, 12);
-
-            if (err) {
-
-                returnText = [NSString stringWithFormat:@"I2C communication failure: %s\n", mach_error_string(err)];
-                goto cya;
-
-            }
-
-            NSData *readData = [NSData dataWithBytes:(const void *)i2cBytes length:(NSUInteger)11];
-
-            NSRange maxValueRange = {7, 1};
-            NSRange currentValueRange = {9, 1};
-
-            [[readData subdataWithRange:maxValueRange] getBytes:&maxValue length:sizeof(1)];
-            [[readData subdataWithRange:currentValueRange] getBytes:&curValue length:sizeof(1)];
-
-            if ( !(strcmp(argv[s+1], "get")) ) {
-
-                returnText = [NSString stringWithFormat:@"%i\n", curValue];
-                returnValue = 0;
-                goto cya;
-
-            } else if ( !(strcmp(argv[s+1], "max")) ) {
-
-                returnText = [NSString stringWithFormat:@"%i\n", maxValue];
-                returnValue = 0;
-                goto cya;
-
-            }
-
-        }
-
-        // Set stuff
-
-        if ( !(strcmp(argv[s+1], "set")) || !(strcmp(argv[s+1], "chg")) ) {
-
-            if (argc != s+4) {
-
-                returnText = [NSString stringWithFormat:@"Missing value! Enter 'm1ddc help' for help!\n"];
-                goto cya;
-
-            }
-
-            int setValue;
-
-            if ( !(strcmp(argv[s+3], "on")) ) { setValue=1; }
-            else if ( !(strcmp(argv[s+3], "off")) ) { setValue=2; }
-            else { setValue = atoi(argv[s+3]); }
-
-            if ( !(strcmp(argv[s+1], "chg")) ) {
-
-                setValue = curValue + setValue;
-                if (setValue < 0 ) { setValue=0; }
-                if (setValue > maxValue ) { setValue=maxValue; }
-
-            }
-
-            data[0] = 0x84;
-            data[1] = 0x03;
-            data[3] = (setValue) >> 8;
-            data[4] = setValue & 255;
-            data[5] = 0x6E ^ 0x51 ^ data[0] ^ data[1] ^ data[2] ^ data[3] ^ data[4];
-
-            for (int i = 0; i <= DDC_ITERATIONS; i++) {
-
-                usleep(DDC_WAIT);
-                err = IOAVServiceWriteI2C(avService, 0x37, inputAddr, data, 6);
-
-                if (err) {
-
-                    returnText = [NSString stringWithFormat:@"I2C communication failure: %s\n", mach_error_string(err)];
-                    goto cya;
-
-                }
-
-            }
-
-            if ( !(strcmp(argv[s+1], "chg")) ) {
-
-                returnText = [NSString stringWithFormat:@"%i\n", setValue];
-                returnValue = 0;
-                goto cya;
-
-            } else {
-
-                returnText = @"";
-                returnValue = 0;
-                goto cya;
-
-            }
-
-        }
-
-        returnText = @"Use 'set', 'get', 'max', 'chg' as first parameter! Enter 'm1ddc help' for help!\n";
-        goto cya;
-
+int getSetValue(struct MainData* d) {
+    if (d->argc != d->shift + 4) {
+        return -1;
     }
 
-    cya:
+    int setValue;
+	char *command = d->argv[d->shift + 1];
+	char *arg = d->argv[d->shift + 3];
 
-    [returnText writeToFile:@"/dev/stdout" atomically:NO encoding:NSUTF8StringEncoding error:nil];
-    return returnValue;
+    if ( !strcmp(arg, "on") ) { setValue = 1; }
+    else if ( !strcmp(arg, "off") ) { setValue = 2; }
+    else { setValue = atoi(arg); }
 
+    if ( !strcmp(command, "chg") ) {
+        setValue = d->curValue + setValue;
+        if (setValue < 0 ) { setValue = 0; }
+        if (setValue > d->maxValue ) { setValue = d->maxValue; }
+    }
+
+    return setValue;
+}
+
+// -- Data preparation and reading
+
+void prepareDataForRead(UInt8* data) {
+    data[0] = 0x82;
+    data[1] = 0x01;
+    data[3] = 0x6e ^ data[0] ^ data[1] ^ data[2] ^ data[3];
+}
+
+void prepareDataForWrite(UInt8* data, UInt8 setValue) {
+    data[0] = 0x84;
+    data[1] = 0x03;
+    data[3] = (setValue) >> 8;
+    data[4] = setValue & 255;
+    data[5] = 0x6E ^ 0x51 ^ data[0] ^ data[1] ^ data[2] ^ data[3] ^ data[4];
+}
+
+int getBytesUsed(UInt8* data) {
+    int bytes = 0;
+    for (int i = 0; i < sizeof(data); ++i) {
+        if (data[i] != 0) {
+            bytes = i + 1;
+        }
+    }
+    return bytes;
+}
+
+NSData* extractValues(struct MainData* d, char *i2cBytes) {
+    NSData *readData = [NSData dataWithBytes:(const void *)i2cBytes length:(NSUInteger)11];
+    NSRange maxValueRange = {7, 1};
+    NSRange currentValueRange = {9, 1};
+
+    [[readData subdataWithRange:maxValueRange] getBytes:&d->maxValue length:sizeof(1)];
+    [[readData subdataWithRange:currentValueRange] getBytes:&d->curValue length:sizeof(1)];
+    return readData;
+}
+
+// -- I2C communication
+
+IOReturn writeToI2C(struct MainData* d) {
+    IOReturn err;
+
+    for (int i = 0; i < DDC_ITERATIONS; ++i) {
+        usleep(DDC_WAIT);
+        err = IOAVServiceWriteI2C(d->avService, 0x37, d->inputAddr, d->data, getBytesUsed(d->data));
+        if (err) {
+            return err;
+        }
+    }
+    return err;
+}
+
+IOReturn readFromI2C(struct MainData* d, char* i2cBytes) {
+    usleep(DDC_WAIT);
+    return IOAVServiceReadI2C(d->avService, 0x37, d->inputAddr, i2cBytes, 12);
+}
+
+
+
+// ----------
+// -- Main --
+
+// Function to handle the display lister and selection
+int displayListerAndSelection(struct MainData *d) {
+
+    if (d->argc == 4) {
+        writeToStdOut(@"No command specified. Please use `list` to list displays, or specify a display number to control\n");
+        return 1;
+    }
+
+    io_iterator_t iter;
+    io_service_t service = 0;
+
+    // Creating IORegistry iterator
+	kern_return_t kerr = createIORegistryIterator(&iter);
+    if (kerr != KERN_SUCCESS) {
+        writeToStdOut([NSString stringWithFormat:@"Error on IORegistryEntryCreateIterator: %d", kerr]);
+        return 1;
+    }
+
+	// Creating AVService
+    CFStringRef externalAVServiceLocation = CFStringCreateWithCString(kCFAllocatorDefault, "External", kCFStringEncodingASCII);
+    int i = 1;
+    bool noMatch = true;
+	char *command = d->argv[d->shift + 2];
+
+	// Iterating through IORegistry
+    while ((service = IOIteratorNext(iter)) != MACH_PORT_NULL) {
+        io_name_t name;
+        IORegistryEntryGetName(service, name);
+		// Checking for AppleCLCD2 or IOMobileFramebufferShim
+        if (!strcmp(name, "AppleCLCD2") || !strcmp(name, "IOMobileFramebufferShim")) {
+            CFStringRef edidUUID = getCFStringRef(service, "EDID UUID");
+            if ( edidUUID != NULL ) {
+
+				// Printing out display list
+                if ( !strcmp(command, "list") || !strcmp(command, "l") ) {
+                    processDisplayAttributes(service, edidUUID, i);
+                }
+				// Selecting display
+				CFStringRef targetIdentifier = CFStringCreateWithCString(kCFAllocatorDefault, command, kCFStringEncodingASCII);
+                if ( atoi(command) == i || CFEqual(targetIdentifier, getDisplayIdentifier(service, edidUUID)) ) {
+                    noMatch = processAVService(&service, iter, externalAVServiceLocation, &d->avService);
+                }
+            	i++;
+            }
+        }
+    }
+
+    if ( !strcmp(command, "list") || !strcmp(command, "l")) {
+		return -1;
+	} else if ( noMatch ) {
+        writeToStdOut(@"The specified display does not exist. Use 'display list' to list displays and use it's number (1, 2...) or its SN:UUID to specify display!\n");
+        return 1;
+    }
+    return 0;
+}
+
+// Function to get ready for DDC operations
+int prepareForDDCOperations(struct MainData* d) {
+	// Clearing data buffer
+	memset(d->data, 0, sizeof(d->data));
+	// Copying input arguments to data buffer
+    int err = dataFromInput(d);
+    if (err) {
+        writeToStdOut(@"Use 'luminance', 'contrast', 'volume' or 'mute' as second parameter! Enter 'm1ddc help' for help!\n");
+        return 1;
+    }
+	return 0;
+}
+
+// Function to handle the reading operation (get, max, chg)
+int readingOperation(struct MainData* d) {
+
+    prepareDataForRead(d->data);
+
+	// Performing I2C write operation
+    IOReturn err = writeToI2C(d);
+    if (err) {
+        writeToStdOut([NSString stringWithFormat:@"I2C communication failure: %s\n", mach_error_string(err)]);
+        return 1;
+    }
+
+    char i2cBytes[12];
+    memset(i2cBytes, 0, sizeof(i2cBytes));
+
+	// Performing I2C read operation
+    err = readFromI2C(d, i2cBytes);
+    if (err) {
+        writeToStdOut([NSString stringWithFormat:@"I2C communication failure: %s\n", mach_error_string(err)]);
+        return 1;
+    }
+
+	// Extracting values from read data
+    NSData *readData = extractValues(d, i2cBytes);
+	char *command = d->argv[d->shift + 1];
+
+	// Printing out the result
+    if ( !(strcmp(command, "get")) ) {
+        writeToStdOut([NSString stringWithFormat:@"%i\n", d->curValue]);
+    } else if ( !(strcmp(command, "max")) ) {
+        writeToStdOut([NSString stringWithFormat:@"%i\n", d->maxValue]);
+    }
+    return 0;
+}
+
+// Function to handle the writing operation (set, chg)
+int writingOperation(struct MainData* d) {
+    // Copying input arguments to data buffer
+    int setValue = getSetValue(d);
+    if (setValue == -1) {
+        writeToStdOut([NSString stringWithFormat:@"Missing value! Enter 'm1ddc help' for help!\n"]);
+        return 1;
+    }
+
+    // Preparing data buffer for write
+    prepareDataForWrite(d->data, setValue);
+
+    // Performing I2C write operation
+    IOReturn err = writeToI2C(d);
+    if (err) {
+        writeToStdOut([NSString stringWithFormat:@"I2C communication failure: %s\n", mach_error_string(err)]);
+        return 1;
+    }
+
+	char *command = d->argv[d->shift + 1];
+    if ( !(strcmp(command, "chg")) ) {
+        writeToStdOut([NSString stringWithFormat:@"%i\n", setValue]);
+    }
+    return 0;
+}
+
+
+
+int main(int argc, char** argv) {
+
+
+	if (argc < 3) {
+		printUsage();
+		return argc > 1 && !strcmp(argv[1], "help") ? 1 : 0;
+	}
+
+	struct MainData d;
+
+    d.argc = argc;
+	d.argv = argv;
+	d.inputAddr = 0x51;
+	d.curValue = -1;
+	d.maxValue = -1;
+	d.shift = 0;
+
+    // Display lister and selection
+
+    if ( !(strcmp(argv[d.shift + 1], "display")) ) {
+        int ret = displayListerAndSelection(&d);
+		if (ret != 0) {
+			return ret == 1 ? 1 : 0;
+		}
+		d.shift = 2;
+    }
+
+
+	d.avService = IOAVServiceCreate(kCFAllocatorDefault);
+    if (!d.avService) {
+        writeToStdOut(@"Could not find a suitable external display.\n");
+        return 1;
+    }
+
+	if ( strcmp(argv[d.shift + 1], "get") && strcmp(argv[d.shift + 1], "max") && strcmp(argv[d.shift + 1], "chg") && strcmp(argv[d.shift + 1], "set") && strcmp(argv[d.shift + 1], "chg") ) {
+		writeToStdOut(@"Use 'set', 'get', 'max', 'chg' as first parameter! Enter 'm1ddc help' for help!\n");
+    	return 1;
+    }
+		
+	int err = prepareForDDCOperations(&d);
+    if (err) return err;
+
+    if ( !strcmp(argv[d.shift + 1], "get") || !strcmp(argv[d.shift + 1], "max") || !strcmp(argv[d.shift + 1], "chg") ) {
+        err = readingOperation(&d);
+    }
+	if ( !strcmp(argv[d.shift + 1], "set") || !strcmp(argv[d.shift + 1], "chg") ) {    
+		err = writingOperation(&d);
+    }
+    
 }
