@@ -86,6 +86,8 @@ DisplayPort 1: 15, DisplayPort 2: 16, HDMI 1: 17, HDMI 2: 18.
 
 `display list` - Lists displays.
 
+`display list detailed` - Lists displays and prints extra display attributes.
+
 `display n` - Chooses which display to control (use number 1, 2 etc.)
 
 You can also use 'l', 'v' instead of 'luminance', 'volume' etc.

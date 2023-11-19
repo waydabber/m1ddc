@@ -68,74 +68,6 @@ static void printUsage() {
     "You can also use 'l', 'v' instead of 'luminance', 'volume' etc.\n");
 }
 
-
-// // ----
-
-// kern_return_t getIORegistryIterator(io_iterator_t* iter) {
-//     io_registry_entry_t root = IORegistryGetRootEntry(kIOMainPortDefault);
-//     kern_return_t ret = IORegistryEntryCreateIterator(root, "IOService", kIORegistryIterateRecursively, iter);
-//     if (ret != KERN_SUCCESS) {
-//         IOObjectRelease(*iter);
-//     }
-//     return ret;
-// }
-
-// CFTypeRef getCFStringRef(io_service_t service, char* key) {
-//     CFStringRef cfstring = CFStringCreateWithCString(kCFAllocatorDefault, key, kCFStringEncodingASCII);
-//     return IORegistryEntrySearchCFProperty(service, kIOServicePlane, cfstring, kCFAllocatorDefault, kIORegistryIterateRecursively);
-// }
-
-// // Function to handle the display lister and selection
-// int getConnectedDisplayInfos(DisplayInfos* displayInfos) {
-//     int currentDisplay = 0;
-//     io_service_t service = 0;
-//     io_iterator_t iter;
-
-//     memset(displayInfos, 0, sizeof(displayInfos) * MAX_DISPLAYS);
-
-//     // Creating IORegistry iterator
-//     if (getIORegistryIterator(&iter) != KERN_SUCCESS) {
-//         return -1;
-//     }
-
-//     CFStringRef externalAVServiceLocation = CFStringCreateWithCString(kCFAllocatorDefault, "External", kCFStringEncodingASCII);
-
-// 	// Iterating through IORegistry
-//     while ((service = IOIteratorNext(iter)) != MACH_PORT_NULL && currentDisplay < MAX_DISPLAYS) {
-//         io_name_t name;
-//         IORegistryEntryGetName(service, name);
-// 		// Checking for AppleCLCD2 or IOMobileFramebufferShim
-//         if (STR_EQ(name, "AppleCLCD2") || STR_EQ(name, "IOMobileFramebufferShim")) {
-//             DisplayInfos display = {};
-
-//             display.adapter = service;
-//             display.avService = getAVServiceProxy(service, iter, externalAVServiceLocation);
-//             display.edid = getCFStringRef(service, "EDID UUID");
-
-//             CFDictionaryRef displayAttrs = getCFStringRef(service, "DisplayAttributes");
-//             if (displayAttrs) {
-//                 NSDictionary* displayAttrsNS = (NSDictionary*)displayAttrs;
-//                 NSDictionary* productAttrs = [displayAttrsNS objectForKey:@"ProductAttributes"];
-//                 if (productAttrs) {
-//                     display.productName = [productAttrs objectForKey:@"ProductName"];
-//                     display.manufacturer = [productAttrs objectForKey:@"ManufacturerID"];
-//                     display.alphNumSerial = [productAttrs objectForKey:@"AlphanumericSerialNumber"];
-//                 }
-//             }
-
-//             if (display.edid != NULL) {
-//                 displayInfos[currentDisplay] = display;
-//                 currentDisplay++;
-//             }    
-//         }
-//     }
-
-//     return currentDisplay;
-// }
-
-// // ----
-
-
 static void printDisplayInfos(DisplayInfos *display, int nbDisplays, bool detailed) {
     for (int i = 0; i < nbDisplays; i++) {
         writeToStdOut([NSString stringWithFormat:@"[%i] %@ (%@)\n", (i + 1), (display + i)->productName, (display + i)->uuid]);
@@ -161,7 +93,6 @@ static DDCValue readingOperation(IOAVServiceRef avService, DDCPacket *packet) {
 
     prepareDDCRead(packet->data);
 
-	// Performing DDC write operation
     IOReturn err = performDDCWrite(avService, packet);
     if (err) {
         writeToStdOut([NSString stringWithFormat:@"DDC communication failure: %s\n", mach_error_string(err)]);
@@ -171,7 +102,6 @@ static DDCValue readingOperation(IOAVServiceRef avService, DDCPacket *packet) {
     DDCPacket readPacket = {};
     readPacket.inputAddr = packet->inputAddr;
 
-	// Performing DDC read operation
     err = performDDCRead(avService, &readPacket);
     if (err) {
         writeToStdOut([NSString stringWithFormat:@"DDC communication failure: %s\n", mach_error_string(err)]);
@@ -184,10 +114,8 @@ static DDCValue readingOperation(IOAVServiceRef avService, DDCPacket *packet) {
 // Function to handle the writing operation (set, chg)
 static int writingOperation(IOAVServiceRef avService, DDCPacket *packet, UInt8 newValue) {
 
-    // Preparing data buffer for write
     prepareDDCWrite(packet->data, newValue);
 
-    // Performing DDC write operation
     IOReturn err = performDDCWrite(avService, packet);
     if (err) {
         writeToStdOut([NSString stringWithFormat:@"DDC communication failure: %s\n", mach_error_string(err)]);
@@ -200,6 +128,7 @@ static int writingOperation(IOAVServiceRef avService, DDCPacket *packet, UInt8 n
 
 int main(int argc, char** argv) {
 
+    bool verbose = false;
     argv += 1;
     argc -= 1;
 
@@ -207,16 +136,20 @@ int main(int argc, char** argv) {
 		printUsage();
 		return argc && STR_EQ(argv[0], "help") ? 1 : 0;
 	}
+
+    if (STR_EQ(argv[0], "-v") || STR_EQ(argv[0], "--verbose")) {
+        argv += 1;
+        argc -= 1;
+        verbose = true;
+    }
     
     DisplayInfos displayInfos[MAX_DISPLAYS];
-    // DisplayInfos displayInfos2[MAX_DISPLAYS];
     DisplayInfos *selectedDisplay = NULL;
 
     // Display lister and selection
     if (STR_EQ(argv[0], "display")) {
 
         int connectedDisplays = getOnlineDisplayInfos(displayInfos);
-        // int connectedDisplays2 = getConnectedDisplayInfos(displayInfos2);
         if (connectedDisplays == 0) {
             writeToStdOut(@"No external display found, aborting");
             return EXIT_FAILURE;
@@ -224,8 +157,7 @@ int main(int argc, char** argv) {
 
         // Printing out display list
         if (STR_EQ(argv[1], "list") || STR_EQ(argv[1], "l")) {
-            printDisplayInfos(displayInfos, connectedDisplays, (argc >= 4 && (STR_EQ(argv[2], "detailed") || STR_EQ(argv[2], "d"))));
-            // printDisplayInfos(displayInfos2, connectedDisplays2, (argc >= 4 && (STR_EQ(argv[3], "detailed") || STR_EQ(argv[3], "d"))));
+            printDisplayInfos(displayInfos, connectedDisplays, (argc >= 3 && (STR_EQ(argv[2], "detailed") || STR_EQ(argv[2], "d"))));
             return EXIT_SUCCESS;
         }
         
@@ -247,8 +179,8 @@ int main(int argc, char** argv) {
         selectedDisplay = displayInfos;
         avService = IOAVServiceCreate(kCFAllocatorDefault);
     } else {
-        CFStringRef externalAVServiceLocation = CFStringCreateWithCString(kCFAllocatorDefault, "External", kCFStringEncodingASCII);
-        avService = getAVServiceProxy(selectedDisplay->adapter, 0, externalAVServiceLocation);
+        // CFStringRef externalAVServiceLocation = CFStringCreateWithCString(kCFAllocatorDefault, "External", kCFStringEncodingASCII);
+        avService = getDisplayAVService(selectedDisplay);
     }
 
     if (avService == NULL) {
@@ -259,6 +191,10 @@ int main(int argc, char** argv) {
     if (argc < 2) {
         writeToStdOut(@"Missing parameter! Enter 'm1ddc help' for help!\n");
         return EXIT_FAILURE;
+    }
+
+    if (verbose) {
+        writeToStdOut([NSString stringWithFormat:@"Using display: %@ [%@]\n", selectedDisplay->productName, selectedDisplay->uuid]);
     }
 
     DDCValue displayAttr = {-1, -1};

@@ -61,25 +61,41 @@ DisplayInfos* selectDisplay(DisplayInfos *displays, int connectedDisplays, char 
 
 static kern_return_t getIORegistryRootIterator(io_iterator_t* iter) {
     io_registry_entry_t root = IORegistryGetRootEntry(kIOMainPortDefault);
-    kern_return_t ret = IORegistryEntryCreateIterator(root, "IOService", kIORegistryIterateRecursively, iter);
+    kern_return_t ret = IORegistryEntryCreateIterator(root, kIOServicePlane, kIORegistryIterateRecursively, iter);
     if (ret != KERN_SUCCESS) {
         IOObjectRelease(*iter);
     }
     return ret;
 }
 
-IOAVServiceRef getAVServiceProxy(io_service_t service, io_iterator_t iter, CFStringRef externalAVServiceLocation) {
+IOAVServiceRef getDisplayAVService(DisplayInfos* displayInfos) {
+
     IOAVServiceRef avService = NULL;
-    if (service == MACH_PORT_NULL) return NULL;
-    if (iter == 0 && getIORegistryRootIterator(&iter) != KERN_SUCCESS) return NULL;
+    io_service_t service = 0;
+    io_iterator_t iter;
+
+    // Creating IORegistry iterator
+    if (getIORegistryRootIterator(&iter) != KERN_SUCCESS) {
+        return NULL;
+    }
+
+    CFStringRef externalAVServiceLocation = CFStringCreateWithCString(kCFAllocatorDefault, "External", kCFStringEncodingASCII);
+
+	// Iterating through IORegistry
     while ((service = IOIteratorNext(iter)) != MACH_PORT_NULL) {
-        io_name_t name;
-        IORegistryEntryGetName(service, name);
-        if (STR_EQ(name, "DCPAVServiceProxy")) {
-            avService = IOAVServiceCreateWithService(kCFAllocatorDefault, service);
-            CFStringRef location = getCFStringRef(service, "Location");
-            if (location != NULL && avService != NULL && !CFStringCompare(externalAVServiceLocation, location, 0)) {
-                return avService;
+        io_string_t servicePath;
+        IORegistryEntryGetPath(service, kIOServicePlane, servicePath);
+        if (displayInfos->ioLocation != NULL && STR_EQ(servicePath, displayInfos->ioLocation.UTF8String)) {
+            while ((service = IOIteratorNext(iter)) != MACH_PORT_NULL) {
+                io_name_t name;
+                IORegistryEntryGetName(service, name);
+                if (STR_EQ(name, "DCPAVServiceProxy")) {
+                    avService = IOAVServiceCreateWithService(kCFAllocatorDefault, service);
+                    CFStringRef location = getCFStringRef(service, "Location");
+                    if (location != NULL && avService != NULL && !CFStringCompare(externalAVServiceLocation, location, 0)) {
+                        return avService;
+                    }
+                }
             }
         }
     }

@@ -35,15 +35,15 @@ typedef struct {
 } DDCValue;
 
 
-DDCPacket createDDCPacket(char *command);
-void prepareDDCRead(UInt8 *data);
-void prepareDDCWrite(UInt8 *data, UInt8 setValue);
-IOReturn performDDCWrite(IOAVServiceRef avService, DDCPacket *packet);
-IOReturn performDDCRead(IOAVServiceRef avService, DDCPacket *packet);
-DDCValue convertI2CtoDDC(char *i2cBytes);
-UInt8 computeAttributeValue(char *command, char *arg, DDCValue displayAttr);
+DDCPacket	createDDCPacket(char *command);
+void		prepareDDCRead(UInt8 *data);
+void		prepareDDCWrite(UInt8 *data, UInt8 setValue);
+IOReturn	performDDCWrite(IOAVServiceRef avService, DDCPacket *packet);
+IOReturn	performDDCRead(IOAVServiceRef avService, DDCPacket *packet);
+DDCValue	convertI2CtoDDC(char *i2cBytes);
+UInt8		computeAttributeValue(char *command, char *arg, DDCValue displayAttr);
 
-extern IOReturn IOAVServiceReadI2C(IOAVServiceRef service, uint32_t chipAddress, uint32_t offset, void *outputBuffer, uint32_t outputBufferSize);
+extern IOReturn	IOAVServiceReadI2C(IOAVServiceRef service, uint32_t chipAddress, uint32_t offset, void *outputBuffer, uint32_t outputBufferSize);
 extern IOReturn IOAVServiceWriteI2C(IOAVServiceRef service, uint32_t chipAddress, uint32_t dataAddress, void *inputBuffer, uint32_t inputBufferSize);
 
 #endif

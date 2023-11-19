@@ -65,7 +65,7 @@ re: fclean all
 
 install:
 	/bin/mkdir -p $(BIN_DIR)
-	/usr/bin/install -s -m 0755 $(NAME) $(BIN_DIR)
+	sudo /usr/bin/install -s -m 0755 $(NAME) $(BIN_DIR)
 
 .PHONY: all clean fclean re
 
