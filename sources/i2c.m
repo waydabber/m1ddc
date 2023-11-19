@@ -1,10 +1,21 @@
 @import Foundation;
 
+#include "ioregistry.h"
 #include "i2c.h"
-#include "m1ddc.h"
 #include "utils.h"
 
-UInt8 dataFromCommand(char *command) {
+
+static int getBytesUsed(UInt8* data) {
+    int bytes = 0;
+    for (int i = 0; i < (int)sizeof(data); ++i) {
+        if (data[i] != 0) {
+            bytes = i + 1;
+        }
+    }
+    return bytes;
+}
+
+static UInt8 dataFromCommand(char *command) {
     if (STR_EQ(command, "luminance") || STR_EQ(command, "l")) { return LUMINANCE; }
     else if (STR_EQ(command, "contrast") || STR_EQ(command, "c")) { return CONTRAST; }
     else if (STR_EQ(command, "volume") || STR_EQ(command, "v")) { return VOLUME; }
@@ -42,8 +53,9 @@ void prepareDDCWrite(UInt8* data, UInt8 newValue) {
     data[5] = 0x6E ^ 0x51 ^ data[0] ^ data[1] ^ data[2] ^ data[3] ^ data[4];
 }
 
+
 IOReturn performDDCRead(IOAVServiceRef avService, DDCPacket *packet) {
-    memset(packet->data, 0, sizeof(packet->data));
+    memset(packet->data, 0, sizeof(UInt8) * DDC_BUFFER_SIZE);
     usleep(DDC_WAIT);
     return IOAVServiceReadI2C(avService, 0x37, packet->inputAddr, packet->data, 12);
 }
@@ -69,4 +81,19 @@ DDCValue convertI2CtoDDC(char *i2cBytes) {
     [[i2cData subdataWithRange:maxValueRange] getBytes:&displayAttr.maxValue length:sizeof(1)];
     [[i2cData subdataWithRange:curValueRange] getBytes:&displayAttr.curValue length:sizeof(1)];
     return displayAttr;
+}
+
+UInt8 computeAttributeValue(char *command, char *arg, DDCValue displayAttr) {
+    int newValue;
+
+    if (STR_EQ(arg, "on") ) { newValue = 1; }
+    else if (STR_EQ(arg, "off") ) { newValue = 2; }
+    else { newValue = atoi(arg); }
+
+    if (STR_EQ(command, "chg")) {
+        newValue = displayAttr.curValue + newValue;
+        if (newValue < 0 ) { newValue = 0; }
+        if (newValue > displayAttr.maxValue ) { newValue = displayAttr.maxValue; }
+    }
+    return (UInt8)newValue;
 }

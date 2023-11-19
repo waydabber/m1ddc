@@ -1,6 +1,8 @@
 #ifndef _I2C_H_
 #define _I2C_H_
 
+#include "ioregistry.h"
+
 #define DEFAULT_INPUT_ADDRESS	0x51
 #define ALTERNATE_INPUT_ADDRESS	0x50
 
@@ -19,13 +21,11 @@
 
 #define DDC_WAIT		10000	// Depending on display this must be set to as high as 50000
 #define DDC_ITERATIONS	2		// Depending on display this must be set higher
+#define DDC_BUFFER_SIZE	256
 
-#define MAX_DISPLAYS	4		// Set this to 2 or 4 depending on the Apple Silicon Mac you're using
-
-typedef CFTypeRef IOAVServiceRef;
 
 typedef struct {
-	UInt8 data[256];
+	UInt8 data[DDC_BUFFER_SIZE];
 	UInt8 inputAddr;
 } DDCPacket;
 
@@ -34,29 +34,6 @@ typedef struct {
 	signed char maxValue;
 } DDCValue;
 
-typedef struct {
-	IOAVServiceRef avService;
-	NSString *edid;
-	NSString *productName;
-	NSString *serial;
-	NSString *manufacturerID;
-	// NSString *manufacturer;
-	// NSString *manufacturerDate;
-	// NSString *uuid; // -> Get from CGDirectDisplayID in CGDisplayCreateUUIDFromDisplayID(id) then CFUUIDCreateString(kCFAllocatorDefault, uuidValue)
-	// NSString *input;
-	// NSString *inputAlt;
-	// NSString *standby;
-	// NSString *luminance;
-	// NSString *contrast;
-	// NSString *volume;
-	// NSString *mute;
-	// NSString *red;
-	// NSString *green;
-	// NSString *blue;
-	// NSString *pbpInput;
-	// NSString *pbp;
-} DisplayInfos;
-
 
 DDCPacket createDDCPacket(char *command);
 void prepareDDCRead(UInt8 *data);
@@ -64,10 +41,8 @@ void prepareDDCWrite(UInt8 *data, UInt8 setValue);
 IOReturn performDDCWrite(IOAVServiceRef avService, DDCPacket *packet);
 IOReturn performDDCRead(IOAVServiceRef avService, DDCPacket *packet);
 DDCValue convertI2CtoDDC(char *i2cBytes);
+UInt8 computeAttributeValue(char *command, char *arg, DDCValue displayAttr);
 
-
-extern IOAVServiceRef IOAVServiceCreate(CFAllocatorRef allocator);
-extern IOAVServiceRef IOAVServiceCreateWithService(CFAllocatorRef allocator, io_service_t service);
 extern IOReturn IOAVServiceReadI2C(IOAVServiceRef service, uint32_t chipAddress, uint32_t offset, void *outputBuffer, uint32_t outputBufferSize);
 extern IOReturn IOAVServiceWriteI2C(IOAVServiceRef service, uint32_t chipAddress, uint32_t dataAddress, void *inputBuffer, uint32_t inputBufferSize);
 

@@ -9,6 +9,9 @@ CFLAGS =	-Wall -Werror -Wextra -fmodules
 CPPFLAGS =	-I $(INC_DIR)
 DEPFLAGS =	-MMD
 
+# Libraries
+LDLIBS =	-framework CoreDisplay
+
 # Commands
 RM =		rm -f
 RMDIR =		rm -rf
@@ -16,16 +19,17 @@ MKDIR =		mkdir -p
 MAKE =		make -C
 
 # Paths
-INC_DIR =	includes
+INC_DIR =	headers
 
 SRC_DIR =	sources
 SOURCES =	i2c \
+			ioregistry \
 			m1ddc \
-			utils \
 
 OBJ_DIR =	.objects
 OBJECTS = 	$(patsubst %,$(OBJ_DIR)/%,$(SOURCES:=.o))
 
+BIN_DIR =	/usr/local/bin
 
 # -- IMPLICIT RULES / LINKING
 
@@ -37,7 +41,7 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.m Makefile
 all: $(NAME)
 
 $(NAME): $(OBJ_DIR) $(OBJECTS)
-	@$(CC) $(OBJECTS) -o $(NAME)
+	@$(CC) $(LDLIBS) $(OBJECTS) -o $@
 	@printf "Created binary \"$(NAME)\"\n"
 
 $(OBJ_DIR):
@@ -58,6 +62,10 @@ fclean: clean
 	fi;
 
 re: fclean all
+
+install:
+	/bin/mkdir -p $(BIN_DIR)
+	/usr/bin/install -s -m 0755 $(NAME) $(BIN_DIR)
 
 .PHONY: all clean fclean re
 
