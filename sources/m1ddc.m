@@ -179,7 +179,6 @@ int main(int argc, char** argv) {
         selectedDisplay = displayInfos;
         avService = IOAVServiceCreate(kCFAllocatorDefault);
     } else {
-        // CFStringRef externalAVServiceLocation = CFStringCreateWithCString(kCFAllocatorDefault, "External", kCFStringEncodingASCII);
         avService = getDisplayAVService(selectedDisplay);
     }
 
