@@ -86,9 +86,27 @@ DisplayPort 1: 15, DisplayPort 2: 16, HDMI 1: 17, HDMI 2: 18.
 
 `display list` - Lists displays.
 
-`display n` - Chooses which display to control (use number 1, 2 etc.)
+`display list detailed` - Lists displays and prints extra display attributes.
+
+`display n` - Chooses which display to control using the number (1, 2 etc.) provided by `display list`
+
+`display (id,uuid,edid,seid,basic,ext,full)=<identifier>` - Chooses which display to control using the number using a specific identification method. (If not set, it defaults to `uuid`). See identications methods for more details.
 
 You can also use 'l', 'v' instead of 'luminance', 'volume' etc.
+
+## Identification methods
+
+The following display identifcation methods are supported, and corresponds to the following strings
+
+- `id`: `<display_id>`
+- `uuid`: `<system_uuid>`
+- `edid`: `<edid_uuid>`
+- `seid`: `<alphnum_serial>:<edid_uuid>`.
+- `basic`: `<vendor>:<model>:<serial>`.
+- `ext`: `<vendor>:<model>:<serial>:<manufacturer>:<alphnum_serial>:<product_name>`.
+- `full`: `<vendor>:<model>:<serial>:<manufacturer>:<alphnum_serial>:<product_name>:<io_location>`.
+
+Required identifiers can be obtained using the `display list detailed` command
 
 ## Example use in a script
 
