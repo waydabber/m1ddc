@@ -3,19 +3,23 @@
 
 # import <CoreGraphics/CoreGraphics.h>
 
-# define MAX_DISPLAYS   4 // Set this to 2 or 4 depending on the Apple Silicon Mac you're using
+# ifndef MAX_DISPLAYS
+#  define MAX_DISPLAYS   4   // Set this to 2 or 4 depending on the Apple Silicon Mac you're using
+# endif
+
 # define UUID_SIZE      37
 
+// IOAVServiceRef is a private class, so we need to define it here
 typedef CFTypeRef IOAVServiceRef;
 
+// Base structure for display infos
 typedef struct
 {
     CGDirectDisplayID id;
-    IOAVServiceRef avService;
     io_service_t adapter;
-    NSString *ioLocation;    
+    NSString *ioLocation;
     NSString *uuid;
-    NSString *edid;    
+    NSString *edid;
     NSString *productName;
     NSString *manufacturer;
     NSString *alphNumSerial;
@@ -26,9 +30,11 @@ typedef struct
 
 CGDisplayCount  getOnlineDisplayInfos(DisplayInfos* displayInfos);
 DisplayInfos*   selectDisplay(DisplayInfos *displays, int connectedDisplays, char *displayIdentifier);
-// IOAVServiceRef  getAVServiceProxy(io_service_t service, io_iterator_t iter, CFStringRef externalAVServiceLocation);
+
+IOAVServiceRef  getDefaultDisplayAVService();
 IOAVServiceRef  getDisplayAVService(DisplayInfos* displayInfos);
 
+// External functions
 extern IOAVServiceRef   IOAVServiceCreate(CFAllocatorRef allocator);
 extern IOAVServiceRef   IOAVServiceCreateWithService(CFAllocatorRef allocator, io_service_t service);
 extern CFDictionaryRef  CoreDisplay_DisplayCreateInfoDictionary(CGDirectDisplayID);

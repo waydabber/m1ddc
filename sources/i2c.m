@@ -1,9 +1,7 @@
 @import Foundation;
 
-#include "ioregistry.h"
 #include "i2c.h"
 #include "utils.h"
-
 
 static int getBytesUsed(UInt8* data) {
     int bytes = 0;
@@ -15,36 +13,22 @@ static int getBytesUsed(UInt8* data) {
     return bytes;
 }
 
-static UInt8 dataFromCommand(char *command) {
-    if (STR_EQ(command, "luminance") || STR_EQ(command, "l")) { return LUMINANCE; }
-    else if (STR_EQ(command, "contrast") || STR_EQ(command, "c")) { return CONTRAST; }
-    else if (STR_EQ(command, "volume") || STR_EQ(command, "v")) { return VOLUME; }
-    else if (STR_EQ(command, "mute") || STR_EQ(command, "m")) { return MUTE; }
-    else if (STR_EQ(command, "input") || STR_EQ(command, "i")) { return INPUT; }
-    else if (STR_EQ(command, "input-alt") || STR_EQ(command, "I")) { return INPUT_ALT; }
-    else if (STR_EQ(command, "standby") || STR_EQ(command, "s")) { return STANDBY; }
-    else if (STR_EQ(command, "red") || STR_EQ(command, "r")) { return RED; }
-    else if (STR_EQ(command, "green") || STR_EQ(command, "g")) { return GREEN; }
-    else if (STR_EQ(command, "blue") || STR_EQ(command, "b")) { return BLUE; }
-    else if (STR_EQ(command, "pbp") || STR_EQ(command, "p")) { return PBP; }
-    else if (STR_EQ(command, "pbp-input") || STR_EQ(command, "pi")) { return PBP_INPUT; }
-    return 0x00;
-}
-
-// Function to get ready for DDC operations
-DDCPacket createDDCPacket(char *command) {
+// Function to get ready for DDC operations for a specific display attribute
+DDCPacket createDDCPacket(UInt8 attrCode) {
     DDCPacket packet = {};
-    packet.data[2] = dataFromCommand(command);
+    packet.data[2] = attrCode;
     packet.inputAddr = packet.data[2] == INPUT_ALT ? ALTERNATE_INPUT_ADDRESS : DEFAULT_INPUT_ADDRESS;
     return packet;
 }
 
+// Prepare DDC packet for read
 void prepareDDCRead(UInt8* data) {
     data[0] = 0x82;
     data[1] = 0x01;
     data[3] = 0x6e ^ data[0] ^ data[1] ^ data[2] ^ data[3];
 }
 
+// Prepare DDC packet for write
 void prepareDDCWrite(UInt8* data, UInt8 newValue) {
     data[0] = 0x84;
     data[1] = 0x03;
@@ -81,19 +65,4 @@ DDCValue convertI2CtoDDC(char *i2cBytes) {
     [[i2cData subdataWithRange:maxValueRange] getBytes:&displayAttr.maxValue length:sizeof(1)];
     [[i2cData subdataWithRange:curValueRange] getBytes:&displayAttr.curValue length:sizeof(1)];
     return displayAttr;
-}
-
-UInt8 computeAttributeValue(char *command, char *arg, DDCValue displayAttr) {
-    int newValue;
-
-    if (STR_EQ(arg, "on") ) { newValue = 1; }
-    else if (STR_EQ(arg, "off") ) { newValue = 2; }
-    else { newValue = atoi(arg); }
-
-    if (STR_EQ(command, "chg")) {
-        newValue = displayAttr.curValue + newValue;
-        if (newValue < 0 ) { newValue = 0; }
-        if (newValue > displayAttr.maxValue ) { newValue = displayAttr.maxValue; }
-    }
-    return (UInt8)newValue;
 }

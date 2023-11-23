@@ -75,13 +75,13 @@ static void printDisplayInfos(DisplayInfos *display, int nbDisplays, bool detail
             writeToStdOut([NSString stringWithFormat:@" - Product name:  %@\n", (display + i)->productName]);
             writeToStdOut([NSString stringWithFormat:@" - Manufacturer:  %@\n", (display + i)->manufacturer]);
             writeToStdOut([NSString stringWithFormat:@" - AN Serial:     %@\n", (display + i)->alphNumSerial]);
-            writeToStdOut([NSString stringWithFormat:@" - Serial:        0x%04x\n", (display + i)->serial]);
-            writeToStdOut([NSString stringWithFormat:@" - Model:         0x%04x\n", (display + i)->model]);
-            writeToStdOut([NSString stringWithFormat:@" - Vendor:        0x%04x\n", (display + i)->vendor]);
+            writeToStdOut([NSString stringWithFormat:@" - Vendor:        %u (0x%04x)\n", (display + i)->vendor, (display + i)->vendor]);
+            writeToStdOut([NSString stringWithFormat:@" - Model:         %u (0x%04x)\n", (display + i)->model, (display + i)->model]);
+            writeToStdOut([NSString stringWithFormat:@" - Serial:        %u (0x%04x)\n", (display + i)->serial, (display + i)->serial]);
             writeToStdOut([NSString stringWithFormat:@" - Display ID:    %i\n", (display + i)->id]);
-            writeToStdOut([NSString stringWithFormat:@" - UUID:          %@\n", (display + i)->uuid]);
-            writeToStdOut([NSString stringWithFormat:@" - EDID:          %@\n", (display + i)->edid]);
-            writeToStdOut([NSString stringWithFormat:@" - IO Path:       %@\n", (display + i)->ioLocation]);
+            writeToStdOut([NSString stringWithFormat:@" - System UUID:   %@\n", (display + i)->uuid]);
+            writeToStdOut([NSString stringWithFormat:@" - EDID UUID:     %@\n", (display + i)->edid]);
+            writeToStdOut([NSString stringWithFormat:@" - IO Location:   %@\n", (display + i)->ioLocation]);
             writeToStdOut([NSString stringWithFormat:@" - Adapter:       %u\n", (display + i)->adapter]);
         }
     }
@@ -124,7 +124,36 @@ static int writingOperation(IOAVServiceRef avService, DDCPacket *packet, UInt8 n
     return 0;
 }
 
+static UInt8 attrCodeFromCommand(char *command) {
+    if (STR_EQ(command, "luminance") || STR_EQ(command, "l")) { return LUMINANCE; }
+    else if (STR_EQ(command, "contrast") || STR_EQ(command, "c")) { return CONTRAST; }
+    else if (STR_EQ(command, "volume") || STR_EQ(command, "v")) { return VOLUME; }
+    else if (STR_EQ(command, "mute") || STR_EQ(command, "m")) { return MUTE; }
+    else if (STR_EQ(command, "input") || STR_EQ(command, "i")) { return INPUT; }
+    else if (STR_EQ(command, "input-alt") || STR_EQ(command, "I")) { return INPUT_ALT; }
+    else if (STR_EQ(command, "standby") || STR_EQ(command, "s")) { return STANDBY; }
+    else if (STR_EQ(command, "red") || STR_EQ(command, "r")) { return RED; }
+    else if (STR_EQ(command, "green") || STR_EQ(command, "g")) { return GREEN; }
+    else if (STR_EQ(command, "blue") || STR_EQ(command, "b")) { return BLUE; }
+    else if (STR_EQ(command, "pbp") || STR_EQ(command, "p")) { return PBP; }
+    else if (STR_EQ(command, "pbp-input") || STR_EQ(command, "pi")) { return PBP_INPUT; }
+    return 0x00;
+}
 
+static UInt8 computeAttributeValue(char *command, char *arg, DDCValue displayAttr) {
+    int newValue;
+
+    if (STR_EQ(arg, "on") ) { newValue = 1; }
+    else if (STR_EQ(arg, "off") ) { newValue = 2; }
+    else { newValue = atoi(arg); }
+
+    if (STR_EQ(command, "chg")) {
+        newValue = displayAttr.curValue + newValue;
+        if (newValue < 0 ) { newValue = 0; }
+        if (newValue > displayAttr.maxValue ) { newValue = displayAttr.maxValue; }
+    }
+    return (UInt8)newValue;
+}
 
 int main(int argc, char** argv) {
 
@@ -177,7 +206,7 @@ int main(int argc, char** argv) {
     // If there is no display selected, we'll use the default display
     if (selectedDisplay == NULL) {
         selectedDisplay = displayInfos;
-        avService = IOAVServiceCreate(kCFAllocatorDefault);
+        avService = getDefaultDisplayAVService();
     } else {
         avService = getDisplayAVService(selectedDisplay);
     }
@@ -197,7 +226,8 @@ int main(int argc, char** argv) {
     }
 
     DDCValue displayAttr = {-1, -1};
-    DDCPacket packet = createDDCPacket(argv[1]);
+    UInt8 attrCode = attrCodeFromCommand(argv[1]);
+    DDCPacket packet = createDDCPacket(attrCode);
 
     // Checking that packet.data[2] is not 0 (invalid command)
     if (packet.data[2] == 0) {
@@ -224,12 +254,12 @@ int main(int argc, char** argv) {
             return EXIT_FAILURE;
         }
 
-        UInt8 newValue = computeAttributeValue(argv[0], argv[2], displayAttr);
+        UInt8 writeValue = computeAttributeValue(argv[0], argv[2], displayAttr);
 
-        if (writingOperation(avService, &packet, newValue)) {
+        if (writingOperation(avService, &packet, writeValue)) {
             return EXIT_FAILURE;
         }
-        writeToStdOut([NSString stringWithFormat:@"%i\n", newValue]);
+        writeToStdOut([NSString stringWithFormat:@"%i\n", writeValue]);
         return EXIT_SUCCESS;
     }
     writeToStdOut(@"Use 'set', 'get', 'max', 'chg' as first parameter! Enter 'm1ddc help' for help!\n");
