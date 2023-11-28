@@ -22,7 +22,7 @@ You can then run the app by entering:
 ./m1ddc
 ```
 
-## Usage examples:
+## Usage examples
 
 ```bash
 # Sets contrast to 5 on default display
@@ -41,30 +41,53 @@ m1ddc display 1 set volume 50
 m1ddc display 10ACB8A0-0000-0000-1419-0104A2435078 set input 15`
 ```
 
-## Commands:
+## Available commands
 
-|Command|Options|Arguments|Description|
-|---:|---|---|---|
-|`set`|`luminance`|`n`|Sets luminance ("brightness") to n, where n is a number between 0 and the maximum value (usually 100).|
-||`contrast`|`n`|Sets contrast to n, where n is a number between 0 and the maximum value (usually 100).|
-||`(red,green,blue)`|`n`|Sets selected color channel gain to n, where n is a number between 0 and the maximum value (usually 100).|
-||`volume`|`n`|Sets volume to n, where n is a number between 0 and the maximum value (usually 100).|
-||`input`|`n`|Sets input source to n. Common values include:<br/> - DisplayPort 1 = `15`<br/> - DisplayPort 2 = `16`<br/> - HDMI 1 = `17`<br/> - HDMI 2 = `18`<br/> - USB-C = `27`|
-||`input-alt`|`n`|Sets input source to n (using alternate addressing, as used by LG). Common values include:<br/> - DisplayPort 1 = `208`<br/> - DisplayPort 2 = `209`<br/> - HDMI 1 = `144`<br/> - HDMI 2 = `145`<br/> - USB-C / DP 3 = `210`|
-||`mute`|`(on,off)`|Sets mute on/off (you can use `1` instead of `on`, `2` insead of `off`).|
-||`pbp`|`n`|Switches PIP/PBP on certain Dell screens (e.g. U3421WE). Possible values:<br/> - off = `0`<br/> - toggle window size = `1`<br/> - toggle window position = `2`<br/> - small window = `33`<br/> - large window = `34`<br/> - 50/50 split = `36`<br/> - 26/74 split = `43`<br/> - 74/26 split = `44`|
-||`pbp-input`|`n`|Sets second PIP/PBP input on certain Dell screens. Possible values:<br/> - DisplayPort 1 = `15`<br/> - DisplayPort 2 = `16`<br/> - HDMI 1 = `17`<br/> - HDMI 2 = `18`|
-|`get`|`luminance`||Returns current luminance (if supported by the display).|
-||`contrast`||Returns current contrast (if supported by the display).|
-||`(red,green,blue)`||Returns current color gain (if supported by the display).|
-||`volume`||Returns current volume (if supported by the display).|
-|`max`|`luminance`||Returns maximum luminance (if supported by the display, usually 100).|
-||`contrast`||Returns maximum contrast (if supported by the display, usually 100).|
-||`(red,green,blue)`||Returns maximum color gain (if supported by the display, usually 100).|
-||`volume`||Returns maximum volume (if supported by the display, usually 100).|
-|`display`|`list`|`[detailed]`|Lists displays. If `detailed`, prints display extended attributes.|
-|`display`|`n`|`[detailed]`|Chooses which display to control using the index (1, 2 etc.) provided by `display list`.|
-|`display`|`(method)=<identifier>`|`[detailed]`|Chooses which display to control using a specific identification method. (If not set, it defaults to `uuid`). _See [identications methods](#identification-methods) for more details._|
+```shell
+ set luminance n         - Sets luminance (brightness) to n, where n is a number between 0 and the maximum value (usually 100).
+     contrast n          - Sets contrast to n, where n is a number between 0 and the maximum value (usually 100).
+     (red,green,blue) n  - Sets selected color channel gain to n, where n is a number between 0 and the maximum value (usually 100).
+     volume n            - Sets volume to n, where n is a number between 0 and the maximum value (usually 100).
+     input n             - Sets input source to n, common values include:
+                           DisplayPort 1: 15, DisplayPort 2: 16, HDMI 1: 17, HDMI 2: 18, USB-C: 27.
+     input-alt n         - Sets input source to n (using alternate addressing, as used by LG), common values include:
+                           DisplayPort 1: 208, DisplayPort 2: 209, HDMI 1: 144, HDMI 2: 145, USB-C / DP 3: 210.
+
+     mute on             - Sets mute on (you can use 1 instead of 'on')
+     mute off            - Sets mute off (you can use 2 instead of 'off')
+
+     pbp n               - Switches PIP/PBP on certain Dell screens (e.g. U3421W), possible values:
+                           off: 0, small window: 33, large window: 34, 50/50 split: 36, 26/74 split: 43, 74/26 split: 44.
+     pbp-input n         - Sets second PIP/PBP input on certain Dell screens, possible values:
+                           DisplayPort 1: 15, DisplayPort 2: 16, HDMI 1: 17, HDMI 2: 18.
+
+ get luminance           - Returns current luminance (if supported by the display).
+     contrast            - Returns current contrast (if supported by the display).
+     (red,green,blue)    - Returns current color gain (if supported by the display).
+     volume              - Returns current volume (if supported by the display).
+
+ max luminance           - Returns maximum luminance (if supported by the display, usually 100).
+     contrast            - Returns maximum contrast (if supported by the display, usually 100).
+     (red,green,blue)    - Returns maximum color gain (if supported by the display, usually 100).
+     volume              - Returns maximum volume (if supported by the display, usually 100).
+
+ chg luminance n         - Changes luminance by n and returns the current value (requires current and max reading support).
+     contrast n          - Changes contrast by n and returns the current value (requires current and max reading support).
+     (red,green,blue) n  - Changes color gain by n and returns the current value (requires current and max reading support).
+     volume n            - Changes volume by n and returns the current value (requires current and max reading support).
+
+ display list [detailed] - Lists displays. If `detailed` is provided, prints display extended attributes.
+         n               - Chooses which display to control (use number 1, 2 etc.)
+         (method=)<id>   - Chooses which display to control using the number using a specific identification method. (If not set, it defaults to `uuid`).
+                           Possible values for `method` are:
+                           'id':    <display_id>
+                           'uuid:   <system_uuid>  *Default
+                           'edid':  <edid_uuid>
+                           'seid':  <alphnum_serial>:<edid_uuid>
+                           'basic': <vendor>:<model>:<serial>
+                           'ext':   <vendor>:<model>:<serial>:<manufacturer>:<alphnum_serial>:<product_name>
+                           'full':  <vendor>:<model>:<serial>:<manufacturer>:<alphnum_serial>:<product_name>:<io_location>
+```
 
 > [!TIP]
 > You can also use 'l', 'v' instead of 'luminance', 'volume' etc.
@@ -79,10 +102,10 @@ The following display identifcation methods are supported, and corresponds to th
 |`id`|`<display_id>`|
 |`uuid`|`<system_uuid>`|
 |`edid`|`<edid_uuid>`|
-|`seid`|`<alphnum_serial>:<edid_uuid>`.|
-|`basic`|`<vendor>:<model>:<serial>`.|
-|`ext`|`<vendor>:<model>:<serial>:<manufacturer>:<alphnum_serial>:<product_name>`.|
-|`full`|`<vendor>:<model>:<serial>:<manufacturer>:<alphnum_serial>:<product_name>:<io_location>`.|
+|`seid`|`<alphnum_serial>:<edid_uuid>`|
+|`basic`|`<vendor>:<model>:<serial>`|
+|`ext`|`<vendor>:<model>:<serial>:<manufacturer>:<alphnum_serial>:<product_name>`|
+|`full`|`<vendor>:<model>:<serial>:<manufacturer>:<alphnum_serial>:<product_name>:<io_location>`|
 
 > [!TIP]
 > Corresponding display attributes can be obtained using the `display list detailed` command
