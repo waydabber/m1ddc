@@ -64,8 +64,16 @@ static void printUsage() {
     " display list            - Lists displays.\n"
     " display list detailed   - Lists displays and print display informations (Manufacturer, Serial, UUID, IOPath...)\n"
     " display n               - Chooses which display to control (use number 1, 2 etc.)\n"
+    " display (method=)<id>   - Chooses which display to control using the number using a specific identification method. (If not set, it defaults to `uuid`). Possible values for `method` are:\n"
+    "                           'id':    <display_id>\n"
+    "                           'uuid:   <system_uuid>  *Default\n"
+    "                           'edid':  <edid_uuid>\n"
+    "                           'seid':  <alphnum_serial>:<edid_uuid>\n"
+    "                           'basic': <vendor>:<model>:<serial>\n"
+    "                           'ext':   <vendor>:<model>:<serial>:<manufacturer>:<alphnum_serial>:<product_name>\n"
+    "                           'full':  <vendor>:<model>:<serial>:<manufacturer>:<alphnum_serial>:<product_name>:<io_location>\n"
     "\n"
-    "You can also use 'l', 'v' instead of 'luminance', 'volume' etc.\n");
+    "Tip: You can also use 'l', 'v' instead of 'luminance', 'volume' etc.\n");
 }
 
 static void printDisplayInfos(DisplayInfos *display, int nbDisplays, bool detailed) {
