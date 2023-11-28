@@ -63,7 +63,7 @@ static void printUsage() {
     "\n"
     " display list [detailed] - Lists displays. If `detailed` is provided, prints display extended attributes.\n"
     "         n               - Chooses which display to control (use number 1, 2 etc.)\n"
-    "         (method=)<id>   - Chooses which display to control using the number using a specific identification method. (If not set, it defaults to `uuid`).\n"
+    "         (method=)<id>   - Chooses which display to control using a specific identification method. (If not set, it defaults to `uuid`).\n"
     "                           Possible values for `method` are:\n"
     "                           'id':    <display_id>\n"
     "                           'uuid:   <system_uuid>  *Default\n"
