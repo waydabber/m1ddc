@@ -13,18 +13,18 @@ This little tool controls external displays (connected via USB-C/DisplayPort Alt
 ## Installation
 
 After download, enter (in Terminal):
-```bash
+```shell
 make
 ```
 
 You can then run the app by entering:
-```bash
-./m1ddc
+```shell
+./m1ddc [options]
 ```
 
 ## Usage examples
 
-```bash
+```shell
 # Sets contrast to 5 on default display
 m1ddc set contrast 5
 # Returns current luminance ("brightness") on default display
@@ -81,7 +81,7 @@ m1ddc display 10ACB8A0-0000-0000-1419-0104A2435078 set input 15`
          (method=)<id>   - Chooses which display to control using the number using a specific identification method. (If not set, it defaults to `uuid`).
                            Possible values for `method` are:
                            'id':    <display_id>
-                           'uuid:   <system_uuid>  *Default
+                           'uuid':  <system_uuid>  *Default
                            'edid':  <edid_uuid>
                            'seid':  <alphnum_serial>:<edid_uuid>
                            'basic': <vendor>:<model>:<serial>
