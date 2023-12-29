@@ -95,7 +95,7 @@ m1ddc display 10ACB8A0-0000-0000-1419-0104A2435078 set input 15`
 
 ## Identification methods
 
-The following display identifcation methods are supported, and corresponds to the following strings
+The following display identification methods are supported, and corresponds to the following strings
 
 |Method|Related display attributes|
 |--:|:--|
@@ -114,7 +114,7 @@ The following display identifcation methods are supported, and corresponds to th
 
 Check out the following [hammerspoon](https://github.com/Hammerspoon/hammerspoon) script.
 
-This script allows you to control the volume of your external Display' brightness, contrast and volume via DDC (if you use an M1 Mac) using [m1ddc](https://github.com/waydabber/m1ddc) and also control your Yamaha AV Receiver through network. The script listens to the standard Apple keyboard media keys and shos the standard macOS Birghtness and Volume OSDs via uses [showosd](https://github.com/waydabber/showosd) :
+This script allows you to control the volume of your external Display' brightness, contrast and volume via DDC (if you use an M1 Mac) using [m1ddc](https://github.com/waydabber/m1ddc) and also control your Yamaha AV Receiver through network. The script listens to the standard Apple keyboard media keys and shos the standard macOS Brightness and Volume OSDs via uses [showosd](https://github.com/waydabber/showosd) :
 
 https://gist.github.com/waydabber/3241fc146cef65131a42ce30e4b6eab7
 
@@ -122,7 +122,7 @@ https://gist.github.com/waydabber/3241fc146cef65131a42ce30e4b6eab7
 
 If you like m1ddc, you'll like [BetterDisplay](https://betterdisplay.pro) even better!
 
-If you need a complete Swift implementation for DDC control on Apple Silicon macs, you can take a look at [AppleSiliconDDC](https://github.com/waydabber/AppleSiliconDDC) which is a complete self contained library I made for BetterDisplay (note: some features and M1 HDMI support is missing from the open source code) and MonitorControl.
+If you need a complete Swift implementation for DDC control on Apple Silicon macs, you can take a look at [AppleSiliconDDC](https://github.com/waydabber/AppleSiliconDDC) which is a complete self-contained library I made for BetterDisplay (note: some features and M1 HDMI support is missing from the open source code) and MonitorControl.
 
 ## Thanks
 
