@@ -2,6 +2,8 @@
 
 This little tool controls external displays (connected via USB-C/DisplayPort Alt Mode) using DDC/CI on Apple Silicon Macs. Useful to embed in various scripts.
 
+For a much more advanced CLI solution check out [BetterDisplay's CLI capabilities](https://github.com/waydabber/BetterDisplay/wiki/Integration-features,-CLI).
+
 > [!WARNING]
 > Please note that this tool does not support the built-in HDMI port of M1 and entry level M2 Macs. This tool does not support Intel Macs. You can use [BetterDisplay](https://github.com/waydabber/BetterDisplay#readme) for free DDC control on all Macs and all ports.
 
