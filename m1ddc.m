@@ -108,8 +108,8 @@ int main(int argc, char** argv) {
             while ((service = IOIteratorNext(iter)) != MACH_PORT_NULL) {
                 io_name_t name;
                 IORegistryEntryGetName(service, name);
-                if ( !strcmp(name, "AppleCLCD2") ) {
 
+                if ((strlen(name) > strlen("dispext") && !memcmp(name, "dispext", strlen("dispext"))) || !strcmp(name, "DisplayPort")) {
                     CFStringRef edidUUID = IORegistryEntrySearchCFProperty(service, kIOServicePlane, edidUUIDKey, kCFAllocatorDefault, kIORegistryIterateRecursively);
 
                     if ( !(edidUUID == NULL) ) {
