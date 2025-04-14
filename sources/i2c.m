@@ -29,12 +29,14 @@ void prepareDDCRead(UInt8* data) {
 }
 
 // Prepare DDC packet for write
-void prepareDDCWrite(UInt8* data, UInt8 newValue) {
+void prepareDDCWrite(DDCPacket *packet, UInt8 newValue) {
+    UInt8* data = packet->data;
+
     data[0] = 0x84;
     data[1] = 0x03;
     data[3] = (newValue) >> 8;
     data[4] = newValue & 255;
-    data[5] = 0x6E ^ 0x51 ^ data[0] ^ data[1] ^ data[2] ^ data[3] ^ data[4];
+    data[5] = 0x6E ^ packet->inputAddr ^ data[0] ^ data[1] ^ data[2] ^ data[3] ^ data[4];
 }
 
 

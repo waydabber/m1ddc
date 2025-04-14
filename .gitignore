@@ -10,3 +10,6 @@
 .objects/
 library/
 m1ddc
+
+# macOS related files
+.DS_Store

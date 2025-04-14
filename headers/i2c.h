@@ -38,7 +38,7 @@ typedef struct {
 DDCPacket	createDDCPacket(UInt8 attrCode);
 
 void		prepareDDCRead(UInt8 *data);
-void		prepareDDCWrite(UInt8 *data, UInt8 setValue);
+void		prepareDDCWrite(DDCPacket *packet, UInt8 setValue);
 
 IOReturn	performDDCWrite(IOAVServiceRef avService, DDCPacket *packet);
 IOReturn	performDDCRead(IOAVServiceRef avService, DDCPacket *packet);
