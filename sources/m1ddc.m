@@ -122,7 +122,7 @@ static DDCValue readingOperation(IOAVServiceRef avService, DDCPacket *packet) {
 // Function to handle the writing operation (set, chg)
 static int writingOperation(IOAVServiceRef avService, DDCPacket *packet, UInt8 newValue) {
 
-    prepareDDCWrite(packet->data, newValue);
+    prepareDDCWrite(packet, newValue);
 
     IOReturn err = performDDCWrite(avService, packet);
     if (err) {
