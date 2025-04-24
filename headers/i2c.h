@@ -18,6 +18,7 @@
 # define BLUE		0x1A			// VCP Code - Video Gain (Drive): Blue
 # define PBP_INPUT	0xE8
 # define PBP		0xE9
+#define KVM 0xE7
 
 # define DDC_WAIT			10000	// Depending on display this must be set to as high as 50000
 # define DDC_ITERATIONS		2		// Depending on display this must be set higher

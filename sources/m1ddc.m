@@ -42,9 +42,13 @@ static void printUsage() {
     "     mute off            - Sets mute off (you can use 2 instead of 'off')\n"
     "\n"
     "     pbp n               - Switches PIP/PBP on certain Dell screens (e.g. U3421W), possible values:\n"
-    "                           off: 0, small window: 33, large window: 34, 50/50 split: 36, 26/74 split: 43, 74/26 split: 44.\n"
+    "                           off: 0, small window: 33, large window: 34, 50/50 split: 36, 26/74 split: 43, 74/26 split: 44, 2x2: 65.\n"
     "     pbp-input n         - Sets second PIP/PBP input on certain Dell screens, possible values:\n"
     "                           DisplayPort 1: 15, DisplayPort 2: 16, HDMI 1: 17, HDMI 2: 18.\n"
+    "                           HDMI 1 and HDMI 2 and DisplayPort 1: 15953.\n"
+    "     kvm n               - Sets KVM order on certain Dell screens, possible values:.\n"
+    "                           USB1, USB2, USB3, USB4: 1728.\n"
+    "                           Set 65280 to move KVM to the next device on some Dells.\n"
     "\n"
     " get luminance           - Returns current luminance (if supported by the display).\n"
     "     contrast            - Returns current contrast (if supported by the display).\n"
@@ -145,6 +149,7 @@ static UInt8 attrCodeFromCommand(char *command) {
     else if (STR_EQ(command, "blue") || STR_EQ(command, "b")) { return BLUE; }
     else if (STR_EQ(command, "pbp") || STR_EQ(command, "p")) { return PBP; }
     else if (STR_EQ(command, "pbp-input") || STR_EQ(command, "pi")) { return PBP_INPUT; }
+    else if (STR_EQ(command, "kvm") || STR_EQ(command, "k")) { return KVM; }
     return 0x00;
 }
 
