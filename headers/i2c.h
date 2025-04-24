@@ -31,15 +31,15 @@ typedef struct {
 } DDCPacket;
 
 typedef struct {
-	signed char curValue;
-	signed char maxValue;
+	signed int curValue;
+	signed int maxValue;
 } DDCValue;
 
 
 DDCPacket	createDDCPacket(UInt8 attrCode);
 
 void		prepareDDCRead(UInt8 *data);
-void		prepareDDCWrite(DDCPacket *packet, UInt8 setValue);
+void prepareDDCWrite(DDCPacket *packet, UInt16 setValue);
 
 IOReturn	performDDCWrite(IOAVServiceRef avService, DDCPacket *packet);
 IOReturn	performDDCRead(IOAVServiceRef avService, DDCPacket *packet);
