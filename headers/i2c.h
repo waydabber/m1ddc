@@ -18,7 +18,7 @@
 # define BLUE		0x1A			// VCP Code - Video Gain (Drive): Blue
 # define PBP_INPUT	0xE8
 # define PBP		0xE9
-#define KVM 0xE7
+# define KVM		0xE7
 
 # define DDC_WAIT			10000	// Depending on display this must be set to as high as 50000
 # define DDC_ITERATIONS		2		// Depending on display this must be set higher
@@ -31,15 +31,15 @@ typedef struct {
 } DDCPacket;
 
 typedef struct {
-	signed char curValue;
-	signed char maxValue;
+	signed int curValue;
+	signed int maxValue;
 } DDCValue;
 
 
 DDCPacket	createDDCPacket(UInt8 attrCode);
 
 void		prepareDDCRead(UInt8 *data);
-void		prepareDDCWrite(DDCPacket *packet, UInt8 setValue);
+void		prepareDDCWrite(DDCPacket *packet, UInt16 setValue);
 
 IOReturn	performDDCWrite(IOAVServiceRef avService, DDCPacket *packet);
 IOReturn	performDDCRead(IOAVServiceRef avService, DDCPacket *packet);
