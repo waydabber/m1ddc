@@ -17,21 +17,31 @@ CGDisplayCount getOnlineDisplayInfos(DisplayInfos* displayInfos) {
     CGDirectDisplayID screenList[MAX_DISPLAYS];
     CGGetOnlineDisplayList(MAX_DISPLAYS, screenList, &screenCount);
 
+    int validDisplayCount = 0;
     // Fetching each display infos from IOKit
-    for (int i = 0; i < (int)screenCount; i++) {
-        DisplayInfos *currDisplay = displayInfos + i;
+    for (int i = 0; i < (int)screenCount && validDisplayCount < MAX_DISPLAYS; i++) {
+        DisplayInfos *currDisplay = displayInfos + validDisplayCount;
         currDisplay->id = screenList[i];
 
         // This is a private API, but it's a shortcut to get the system UUID
-        CFDictionaryRef displayInfos = CoreDisplay_DisplayCreateInfoDictionary(currDisplay->id);
+        CFDictionaryRef displayInfoDict = CoreDisplay_DisplayCreateInfoDictionary(currDisplay->id);
+        if (displayInfoDict == NULL) {
+            // Skip virtual displays that don't provide info dictionary
+            continue;
+        }
 
         currDisplay->serial = CGDisplaySerialNumber(currDisplay->id);
         currDisplay->model = CGDisplayModelNumber(currDisplay->id);
         currDisplay->vendor = CGDisplayVendorNumber(currDisplay->id);
 
-        currDisplay->uuid = CFDictionaryGetValue(displayInfos, CFSTR("kCGDisplayUUID"));
-        currDisplay->ioLocation = CFDictionaryGetValue(displayInfos, CFSTR("IODisplayLocation"));
-        
+        currDisplay->uuid = CFDictionaryGetValue(displayInfoDict, CFSTR("kCGDisplayUUID"));
+        currDisplay->ioLocation = CFDictionaryGetValue(displayInfoDict, CFSTR("IODisplayLocation"));
+
+        // Skip virtual displays (like Sidecar/AirPlay) that don't have required properties
+        if (currDisplay->uuid == NULL || currDisplay->ioLocation == NULL) {
+            continue;
+        }
+
         // Retrieving IORegistry entry for display
         currDisplay->adapter = IORegistryEntryCopyFromPath(kIOMainPortDefault, (CFStringRef)currDisplay->ioLocation);
         if (currDisplay->adapter == MACH_PORT_NULL) {
@@ -45,13 +55,16 @@ CGDisplayCount getOnlineDisplayInfos(DisplayInfos* displayInfos) {
             NSDictionary* displayAttrsNS = (NSDictionary*)displayAttrs;
             NSDictionary* productAttrs = [displayAttrsNS objectForKey:@"ProductAttributes"];
             if (productAttrs) {
-                currDisplay->productName = [productAttrs objectForKey:@"ProductName"];
+                currDisplay->productName = [productAttrs objectForKey:@"ProductName"] ?: @"Unknown Display";
                 currDisplay->manufacturer = [productAttrs objectForKey:@"ManufacturerID"];
                 currDisplay->alphNumSerial = [productAttrs objectForKey:@"AlphanumericSerialNumber"];
             }
         }
+
+        validDisplayCount++;
     }
-    return screenCount;
+
+    return validDisplayCount;
 }
 
 /* 
@@ -69,13 +82,13 @@ NSString *getDisplayIdentifier(DisplayInfos *display, char *identificationMethod
     if (STR_EQ(identificationMethod, "id")) {
         return [NSString stringWithFormat:@"%u", display->id];
     } else if (STR_EQ(identificationMethod, "uuid")) {
-        return display->uuid;
+        return display->uuid ?: @"";
     } else if (STR_EQ(identificationMethod, "edid")) {
-        return display->edid;
+        return display->edid ?: @"";
     } else if (STR_EQ(identificationMethod, "seid")) {
         return [NSString stringWithFormat:@"%@:%@",
-            display->alphNumSerial,
-            display->edid];
+            display->alphNumSerial ?: @"",
+            display->edid ?: @""];
     } else if (STR_EQ(identificationMethod, "basic")) {
         return [NSString stringWithFormat:@"%u:%u:%u",
             display->vendor,
@@ -86,18 +99,18 @@ NSString *getDisplayIdentifier(DisplayInfos *display, char *identificationMethod
             display->vendor,
             display->model,
             display->serial,
-            display->manufacturer,
-            display->alphNumSerial,
-            display->productName];
+            display->manufacturer ?: @"",
+            display->alphNumSerial ?: @"",
+            display->productName ?: @""];
     } else if (STR_EQ(identificationMethod, "full")) {
         return [NSString stringWithFormat:@"%d:%d:%d:%@:%@:%@:%@",
             display->vendor,
             display->model,
             display->serial,
-            display->manufacturer,
-            display->alphNumSerial,
-            display->productName,
-            display->ioLocation];
+            display->manufacturer ?: @"",
+            display->alphNumSerial ?: @"",
+            display->productName ?: @"",
+            display->ioLocation ?: @""];
     }
     return NULL;
 }

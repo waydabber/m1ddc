@@ -5,7 +5,8 @@
 
 static int getBytesUsed(UInt8* data) {
     int bytes = 0;
-    for (int i = 0; i < (int)sizeof(data); ++i) {
+    // Check up to DDC_BUFFER_SIZE bytes, not sizeof(data) which is just pointer size
+    for (int i = 0; i < DDC_BUFFER_SIZE; ++i) {
         if (data[i] != 0) {
             bytes = i + 1;
         }
