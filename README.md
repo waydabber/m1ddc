@@ -122,10 +122,6 @@ This script allows you to control the volume of your external Display' brightnes
 
 https://gist.github.com/waydabber/3241fc146cef65131a42ce30e4b6eab7
 
-## Raycast Extension
-
-If you use [Raycast](https://raycast.com), there is a [Display Input Switcher](https://www.raycast.com/clins1994/display-input-switcher) extension that provides a GUI for m1ddc. It doesn't yet cover all m1ddc features — contributions are welcome via the [GitHub repository](https://github.com/clins1994/raycast-display-input-switcher) or through the [Raycast contribution guidelines](https://developers.raycast.com/basics/contribute-to-an-extension).
-
 ## BetterDisplay
 
 If you like m1ddc, you'll like [BetterDisplay](https://betterdisplay.pro) even better!
@@ -133,6 +129,13 @@ If you like m1ddc, you'll like [BetterDisplay](https://betterdisplay.pro) even b
 BetterDisplay's CLI documentation: https://github.com/waydabber/BetterDisplay/wiki/Integration-features,-CLI
 
 If you need a complete Swift implementation for DDC control on Apple Silicon macs, you can take a look at [AppleSiliconDDC](https://github.com/waydabber/AppleSiliconDDC) which is a complete self-contained library I made for BetterDisplay (note: some features and M1 HDMI support is missing from the open source code) and MonitorControl.
+
+## Raycast Extensions
+
+If you use [Raycast](https://raycast.com), there are extensions available for both m1ddc and BetterDisplay:
+
+- [Display Input Switcher](https://www.raycast.com/clins1994/display-input-switcher) — a GUI for m1ddc. It doesn't yet cover all m1ddc features — contributions are welcome via the [GitHub repository](https://github.com/clins1994/raycast-display-input-switcher) or through the [Raycast contribution guidelines](https://developers.raycast.com/basics/contribute-to-an-extension).
+- [BetterDisplay](https://www.raycast.com/pascal_burkhard/betterdisplay) — a Raycast extension for interacting with BetterDisplay.
 
 ## Thanks
 
