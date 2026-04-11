@@ -130,6 +130,13 @@ BetterDisplay's CLI documentation: https://github.com/waydabber/BetterDisplay/wi
 
 If you need a complete Swift implementation for DDC control on Apple Silicon macs, you can take a look at [AppleSiliconDDC](https://github.com/waydabber/AppleSiliconDDC) which is a complete self-contained library I made for BetterDisplay (note: some features and M1 HDMI support is missing from the open source code) and MonitorControl.
 
+## Raycast Extensions
+
+If you use [Raycast](https://raycast.com), there are extensions available for both m1ddc and BetterDisplay:
+
+- [Display Input Switcher](https://www.raycast.com/clins1994/display-input-switcher) — a GUI for m1ddc. It doesn't yet cover all m1ddc features — contributions are welcome via the [GitHub repository](https://github.com/clins1994/raycast-display-input-switcher) or through the [Raycast contribution guidelines](https://developers.raycast.com/basics/contribute-to-an-extension).
+- [BetterDisplay](https://www.raycast.com/pascal_burkhard/betterdisplay) — a Raycast extension for interacting with BetterDisplay.
+
 ## Thanks
 
 Thanks to [@tao-j](https://github.com/tao-j) [@alin23](https://github.com/alin23), [@ybbond](https://github.com/ybbond)
