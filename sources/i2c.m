@@ -62,7 +62,7 @@ IOReturn performDDCWrite(IOAVServiceRef avService, DDCPacket *packet) {
 DDCValue convertI2CtoDDC(char *i2cBytes) {
     DDCValue displayAttr = {};
     NSData *i2cData = [NSData dataWithBytes:(const void *)i2cBytes length:(NSUInteger)11];
-    NSRange maxValueRange = {7, 2};
+    NSRange maxValueRange = {6, 2};
     uint16_t maxValue = 0;
     [[i2cData subdataWithRange:maxValueRange] getBytes:&maxValue length:sizeof(2)];
     displayAttr.maxValue = CFSwapInt16BigToHost(maxValue);
