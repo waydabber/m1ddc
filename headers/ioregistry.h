@@ -12,6 +12,15 @@
 // IOAVServiceRef is a private class, so we need to define it here
 typedef CFTypeRef IOAVServiceRef;
 
+# define DDC_CHIP_ADDRESS_DEFAULT  0x37
+# define DDC_CHIP_ADDRESS_MCDP29XX 0xB7
+
+typedef struct
+{
+    IOAVServiceRef service;
+    UInt32 chipAddress;
+} DDCTransport;
+
 // Base structure for display infos
 typedef struct
 {
@@ -33,6 +42,7 @@ DisplayInfos*   selectDisplay(DisplayInfos *displays, int connectedDisplays, cha
 
 IOAVServiceRef  getDefaultDisplayAVService();
 IOAVServiceRef  getDisplayAVService(DisplayInfos* displayInfos);
+DDCTransport    getDisplayDDCTransport(DisplayInfos* displayInfos);
 
 // External functions
 extern IOAVServiceRef   IOAVServiceCreate(CFAllocatorRef allocator);

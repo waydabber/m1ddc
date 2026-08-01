@@ -11,6 +11,30 @@ static CFTypeRef getCFStringRef(io_service_t service, char* key) {
     return IORegistryEntrySearchCFProperty(service, kIOServicePlane, cfstring, kCFAllocatorDefault, kIORegistryIterateRecursively);
 }
 
+static Boolean isMCDP29XXProxy(io_service_t proxy) {
+    io_registry_entry_t parent = MACH_PORT_NULL;
+    if (IORegistryEntryGetParentEntry(proxy, kIOServicePlane, &parent) != KERN_SUCCESS) {
+        return false;
+    }
+
+    Boolean isMCDP29XX = false;
+    CFTypeRef providerClass = IORegistryEntryCreateCFProperty(
+        parent,
+        CFSTR("EPICProviderClass"),
+        kCFAllocatorDefault,
+        0
+    );
+    if (providerClass != NULL && CFGetTypeID(providerClass) == CFStringGetTypeID()) {
+        isMCDP29XX = CFStringCompare(providerClass, CFSTR("AppleDCPMCDP29XX"), 0) == kCFCompareEqualTo;
+    }
+
+    if (providerClass != NULL) {
+        CFRelease(providerClass);
+    }
+    IOObjectRelease(parent);
+    return isMCDP29XX;
+}
+
 CGDisplayCount getOnlineDisplayInfos(DisplayInfos* displayInfos) {
     // Getting online display list and count
     CGDisplayCount screenCount;
@@ -159,38 +183,84 @@ IOAVServiceRef getDefaultDisplayAVService() {
     return IOAVServiceCreate(kCFAllocatorDefault);
 }
 
-IOAVServiceRef getDisplayAVService(DisplayInfos* displayInfos) {
+DDCTransport getDisplayDDCTransport(DisplayInfos* displayInfos) {
 
-    IOAVServiceRef avService = NULL;
-    io_service_t service = 0;
-    io_iterator_t iter;
-
-    // Creating IORegistry iterator
-    if (getIORegistryRootIterator(&iter) != KERN_SUCCESS) {
-        return NULL;
+    DDCTransport transport = {
+        .service = NULL,
+        .chipAddress = DDC_CHIP_ADDRESS_DEFAULT,
+    };
+    if (displayInfos == NULL || displayInfos->adapter == MACH_PORT_NULL) {
+        return transport;
     }
 
-    CFStringRef externalAVServiceLocation = CFStringCreateWithCString(kCFAllocatorDefault, "External", kCFStringEncodingASCII);
+    uint64_t selectedAdapterID;
+    if (IORegistryEntryGetRegistryEntryID(displayInfos->adapter, &selectedAdapterID) != KERN_SUCCESS) {
+        return transport;
+    }
+
+    // Creating IORegistry iterator
+    io_iterator_t iter;
+    if (getIORegistryRootIterator(&iter) != KERN_SUCCESS) {
+        return transport;
+    }
+
+    Boolean framebufferMatchesDisplay = false;
+    io_service_t service;
 
 	// Iterating through IORegistry
     while ((service = IOIteratorNext(iter)) != MACH_PORT_NULL) {
-        io_string_t servicePath;
-        IORegistryEntryGetPath(service, kIOServicePlane, servicePath);
-        // Searching for DCPAVServiceProxy with the same location as the display
-        if (displayInfos->ioLocation != NULL && STR_EQ(servicePath, displayInfos->ioLocation.UTF8String)) {
-            while ((service = IOIteratorNext(iter)) != MACH_PORT_NULL) {
-                io_name_t name;
-                IORegistryEntryGetName(service, name);
-                if (STR_EQ(name, "DCPAVServiceProxy")) {
-                    // Creating IOAVServiceRef from DCPAVServiceProxy
-                    avService = IOAVServiceCreateWithService(kCFAllocatorDefault, service);
-                    CFStringRef location = getCFStringRef(service, "Location");
-                    if (location != NULL && avService != NULL && !CFStringCompare(externalAVServiceLocation, location, 0)) {
-                        return avService;
-                    }
-                }
-            }
+        if (IOObjectConformsTo(service, "IOMobileFramebuffer")) {
+            uint64_t framebufferID;
+            framebufferMatchesDisplay =
+                IORegistryEntryGetRegistryEntryID(service, &framebufferID) == KERN_SUCCESS &&
+                framebufferID == selectedAdapterID;
+            IOObjectRelease(service);
+            continue;
         }
+
+        // Searching for DCPAVServiceProxy associated with the selected display
+        io_name_t name;
+        IORegistryEntryGetName(service, name);
+        if (!framebufferMatchesDisplay || !STR_EQ(name, "DCPAVServiceProxy")) {
+            IOObjectRelease(service);
+            continue;
+        }
+
+        // Creating IOAVServiceRef from DCPAVServiceProxy
+        IOAVServiceRef avService = IOAVServiceCreateWithService(kCFAllocatorDefault, service);
+        if (avService == NULL) {
+            IOObjectRelease(service);
+            continue;
+        }
+
+        CFStringRef location = getCFStringRef(service, "Location");
+        Boolean isExternal = location != NULL &&
+            CFGetTypeID(location) == CFStringGetTypeID() &&
+            CFStringCompare(CFSTR("External"), location, 0) == kCFCompareEqualTo;
+        if (location != NULL) {
+            CFRelease(location);
+        }
+
+        if (!isExternal) {
+            CFRelease(avService);
+            IOObjectRelease(service);
+            continue;
+        }
+
+        transport.service = avService;
+        // MCDP29xx routes DDC through chip address 0xB7.
+        transport.chipAddress = isMCDP29XXProxy(service)
+            ? DDC_CHIP_ADDRESS_MCDP29XX
+            : DDC_CHIP_ADDRESS_DEFAULT;
+        IOObjectRelease(service);
+        IOObjectRelease(iter);
+        return transport;
     }
-    return NULL;
+
+    IOObjectRelease(iter);
+    return transport;
+}
+
+IOAVServiceRef getDisplayAVService(DisplayInfos* displayInfos) {
+    return getDisplayDDCTransport(displayInfos).service;
 }
