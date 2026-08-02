@@ -26,7 +26,7 @@ You can then run the app by entering:
 
 ## Usage examples
 
-```shell
+```
 # Sets contrast to 5 on default display
 m1ddc set contrast 5
 # Returns current luminance ("brightness") on default display
@@ -45,7 +45,7 @@ m1ddc display 10ACB8A0-0000-0000-1419-0104A2435078 set input 15`
 
 ## Available commands
 
-```shell
+```
  set luminance n         - Sets luminance (brightness) to n, between 0 and the maximum value (usually 100).
      contrast n          - Sets contrast to n, between 0 and the maximum value (usually 100).
      (red|green|blue) n  - Sets the selected color-channel gain to n, between 0 and the maximum value (usually 100).
