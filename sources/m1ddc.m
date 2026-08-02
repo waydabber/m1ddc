@@ -15,8 +15,8 @@ static void writeToStdOut(NSString *text) {
 }
 
 static void printUsage() {
-    writeToStdOut(@"Controls volume, luminance (brightness), contrast, color gain, input of an external Display connected via USB-C (DisplayPort Alt Mode) over DDC on an Apple Silicon Mac.\n"
-    "Displays attached via the built-in HDMI port of M1 or entry level M2 Macs are not supported.\n"
+    writeToStdOut(@"Controls volume, luminance (brightness), contrast, color gain, and input of an external display over DDC on an Apple Silicon Mac.\n"
+    "Supports USB-C/DisplayPort Alt Mode and supported built-in HDMI ports.\n"
     "\n"
     "Usage examples:\n"
     "\n"
@@ -100,12 +100,12 @@ static void printDisplayInfos(DisplayInfos *display, int nbDisplays, bool detail
 }
 
 // Function to handle the reading operation (get, max, chg)
-static DDCValue readingOperation(IOAVServiceRef avService, DDCPacket *packet) {
+static DDCValue readingOperation(DDCTransport *transport, DDCPacket *packet) {
     DDCValue dummyAttr = {-1, -1};
 
     prepareDDCRead(packet->data);
 
-    IOReturn err = performDDCWrite(avService, packet);
+    IOReturn err = performDDCWriteAtChipAddress(transport->service, transport->chipAddress, packet);
     if (err) {
         writeToStdOut([NSString stringWithFormat:@"DDC communication failure: %s\n", mach_error_string(err)]);
         return dummyAttr;
@@ -114,7 +114,7 @@ static DDCValue readingOperation(IOAVServiceRef avService, DDCPacket *packet) {
     DDCPacket readPacket = {};
     readPacket.inputAddr = packet->inputAddr;
 
-    err = performDDCRead(avService, &readPacket);
+    err = performDDCReadAtChipAddress(transport->service, transport->chipAddress, &readPacket);
     if (err) {
         writeToStdOut([NSString stringWithFormat:@"DDC communication failure: %s\n", mach_error_string(err)]);
         return dummyAttr;
@@ -124,11 +124,11 @@ static DDCValue readingOperation(IOAVServiceRef avService, DDCPacket *packet) {
 }
 
 // Function to handle the writing operation (set, chg)
-static int writingOperation(IOAVServiceRef avService, DDCPacket *packet, UInt16 newValue) {
+static int writingOperation(DDCTransport *transport, DDCPacket *packet, UInt16 newValue) {
 
     prepareDDCWrite(packet, newValue);
 
-    IOReturn err = performDDCWrite(avService, packet);
+    IOReturn err = performDDCWriteAtChipAddress(transport->service, transport->chipAddress, packet);
     if (err) {
         writeToStdOut([NSString stringWithFormat:@"DDC communication failure: %s\n", mach_error_string(err)]);
         return 1;
@@ -215,17 +215,42 @@ int main(int argc, char** argv) {
         argc -= 2;
     }
 
-    IOAVServiceRef avService;
+    DDCTransport transport = {
+        .service = NULL,
+        .chipAddress = DDC_CHIP_ADDRESS_DEFAULT,
+    };
 
-    // If there is no display selected, we'll use the default display
+    // For unqualified commands, use the main display's matched service only
+    // when it is positively identified as MCDP29xx. Otherwise preserve the
+    // legacy default IOAVServiceCreate()/0x37 behavior.
     if (selectedDisplay == NULL) {
-        selectedDisplay = displayInfos;
-        avService = getDefaultDisplayAVService();
+        int connectedDisplays = getOnlineDisplayInfos(displayInfos);
+        CGDirectDisplayID mainDisplayID = CGMainDisplayID();
+
+        for (int i = 0; i < connectedDisplays; ++i) {
+            if (displayInfos[i].id != mainDisplayID) {
+                continue;
+            }
+
+            DDCTransport mainTransport = getDisplayDDCTransport(displayInfos + i);
+            if (mainTransport.service != NULL && mainTransport.chipAddress == DDC_CHIP_ADDRESS_MCDP29XX) {
+                selectedDisplay = displayInfos + i;
+                transport = mainTransport;
+            } else if (mainTransport.service != NULL) {
+                CFRelease(mainTransport.service);
+            }
+            break;
+        }
+
+        if (transport.service == NULL) {
+            selectedDisplay = displayInfos;
+            transport.service = getDefaultDisplayAVService();
+        }
     } else {
-        avService = getDisplayAVService(selectedDisplay);
+        transport = getDisplayDDCTransport(selectedDisplay);
     }
 
-    if (avService == NULL) {
+    if (transport.service == NULL) {
         writeToStdOut(@"Could not find a suitable external display.\n");
         return EXIT_FAILURE;
     }
@@ -251,7 +276,7 @@ int main(int argc, char** argv) {
 
     // Reading current
     if (!STR_EQ(argv[0], "set")) {
-        displayAttr = readingOperation(avService, &packet);
+        displayAttr = readingOperation(&transport, &packet);
         if (displayAttr.curValue == -1) {
             return EXIT_FAILURE;
         }
@@ -275,7 +300,7 @@ int main(int argc, char** argv) {
 
         UInt16 writeValue = computeAttributeValue(argv[0], argv[2], displayAttr);
 
-        if (writingOperation(avService, &packet, writeValue)) {
+        if (writingOperation(&transport, &packet, writeValue)) {
             return EXIT_FAILURE;
         }
         writeToStdOut([NSString stringWithFormat:@"Writing %i\n", writeValue]);

@@ -40,22 +40,30 @@ void prepareDDCWrite(DDCPacket *packet, UInt16 newValue) {
 }
 
 
-IOReturn performDDCRead(IOAVServiceRef avService, DDCPacket *packet) {
+IOReturn performDDCReadAtChipAddress(IOAVServiceRef avService, UInt32 chipAddress, DDCPacket *packet) {
     memset(packet->data, 0, sizeof(UInt8) * DDC_BUFFER_SIZE);
-    usleep(DDC_WAIT);
-    return IOAVServiceReadI2C(avService, 0x37, packet->inputAddr, packet->data, 12);
+    usleep(chipAddress == DDC_CHIP_ADDRESS_MCDP29XX ? DDC_MCDP_READ_WAIT : DDC_WAIT);
+    return IOAVServiceReadI2C(avService, chipAddress, packet->inputAddr, packet->data, 12);
 }
 
-IOReturn performDDCWrite(IOAVServiceRef avService, DDCPacket *packet) {
+IOReturn performDDCWriteAtChipAddress(IOAVServiceRef avService, UInt32 chipAddress, DDCPacket *packet) {
     IOReturn ret;
 
     for (int i = 0; i < DDC_ITERATIONS; ++i) {
         usleep(DDC_WAIT);
-        if ((ret = IOAVServiceWriteI2C(avService, 0x37, packet->inputAddr, packet->data, getBytesUsed(packet->data)))) {
+        if ((ret = IOAVServiceWriteI2C(avService, chipAddress, packet->inputAddr, packet->data, getBytesUsed(packet->data)))) {
             return ret;
         }
     }
     return ret;
+}
+
+IOReturn performDDCRead(IOAVServiceRef avService, DDCPacket *packet) {
+    return performDDCReadAtChipAddress(avService, DDC_CHIP_ADDRESS_DEFAULT, packet);
+}
+
+IOReturn performDDCWrite(IOAVServiceRef avService, DDCPacket *packet) {
+    return performDDCWriteAtChipAddress(avService, DDC_CHIP_ADDRESS_DEFAULT, packet);
 }
 
 
