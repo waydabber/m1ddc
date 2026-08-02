@@ -46,53 +46,55 @@ m1ddc display 10ACB8A0-0000-0000-1419-0104A2435078 set input 15`
 ## Available commands
 
 ```shell
- set luminance n         - Sets luminance (brightness) to n, where n is a number between 0 and the maximum value (usually 100).
-     contrast n          - Sets contrast to n, where n is a number between 0 and the maximum value (usually 100).
-     (red,green,blue) n  - Sets selected color channel gain to n, where n is a number between 0 and the maximum value (usually 100).
-     volume n            - Sets volume to n, where n is a number between 0 and the maximum value (usually 100).
-     input n             - Sets input source to n, common values include:
+ set luminance n         - Sets luminance (brightness) to n, between 0 and the maximum value (usually 100).
+     contrast n          - Sets contrast to n, between 0 and the maximum value (usually 100).
+     (red|green|blue) n  - Sets the selected color-channel gain to n, between 0 and the maximum value (usually 100).
+     volume n            - Sets volume to n, between 0 and the maximum value (usually 100).
+     input n             - Sets the input source. Common values:
                            DisplayPort 1: 15, DisplayPort 2: 16, HDMI 1: 17, HDMI 2: 18, USB-C: 27.
-     input-alt n         - Sets input source to n (using alternate addressing, as used by LG), common values include:
+     input-alt n         - Sets the input source using the alternate VCP code used by some LG displays. Common values:
                            DisplayPort 1: 208, DisplayPort 2: 209, HDMI 1: 144, HDMI 2: 145, USB-C / DP 3: 210.
 
-     mute on             - Sets mute on (you can use 1 instead of 'on')
-     mute off            - Sets mute off (you can use 2 instead of 'off')
+     mute on|off         - Enables or disables mute. You can use 1 for on and 2 for off.
 
-     pbp n               - Switches PIP/PBP on certain Dell screens (e.g. U3421W), possible values:
-                           off: 0, small window: 33, large window: 34, 50/50 split: 36, 26/74 split: 43, 74/26 split: 44.
-     pbp-input n         - Sets second PIP/PBP input on certain Dell screens, possible values:
-                           DisplayPort 1: 15, DisplayPort 2: 16, HDMI 1: 17, HDMI 2: 18.
-     kvm n               - Sets KVM order on certain Dell screens, possible values: TBD.
-     kvm-switch          - Moves KVM to the next device on some Dells.
-     asus-kvm n          - Selects the USB upstream on certain ASUS screens (e.g. XG27UCDMG) when Auto KVM is disabled, possible values:
+     pbp n               - Configures PIP/PBP on certain Dell displays (such as the U3421W). Known values:
+                           Off: 0, small window: 33, large window: 34, 50/50 split: 36,
+                           26/74 split: 43, 74/26 split: 44, 2x2: 65.
+     pbp-input n         - Sets the secondary PIP/PBP input on certain Dell displays. Known values:
+                           DisplayPort 1: 15, DisplayPort 2: 16, HDMI 1: 17, HDMI 2: 18,
+                           HDMI 1 + HDMI 2 + DisplayPort 1: 15953.
+     kvm n               - Controls the KVM on certain Dell displays. Known values:
+                           KVM order for USB 1–4: 1728, switch to the next device: 65280.
+     asus-kvm n          - Selects the USB upstream on certain ASUS displays (such as the XG27UCDMG)
+                           when Auto KVM is disabled. Known values:
                            USB-B: 2, USB-C: 3.
 
- get luminance           - Returns current luminance (if supported by the display).
-     contrast            - Returns current contrast (if supported by the display).
-     (red,green,blue)    - Returns current color gain (if supported by the display).
-     volume              - Returns current volume (if supported by the display).
+ get luminance           - Returns the current luminance, if supported by the display.
+     contrast            - Returns the current contrast, if supported by the display.
+     (red|green|blue)    - Returns the current color-channel gain, if supported by the display.
+     volume              - Returns the current volume, if supported by the display.
 
- max luminance           - Returns maximum luminance (if supported by the display, usually 100).
-     contrast            - Returns maximum contrast (if supported by the display, usually 100).
-     (red,green,blue)    - Returns maximum color gain (if supported by the display, usually 100).
-     volume              - Returns maximum volume (if supported by the display, usually 100).
+ max luminance           - Returns the maximum luminance, if supported by the display (usually 100).
+     contrast            - Returns the maximum contrast, if supported by the display (usually 100).
+     (red|green|blue)    - Returns the maximum color-channel gain, if supported by the display (usually 100).
+     volume              - Returns the maximum volume, if supported by the display (usually 100).
 
- chg luminance n         - Changes luminance by n and returns the current value (requires current and max reading support).
-     contrast n          - Changes contrast by n and returns the current value (requires current and max reading support).
-     (red,green,blue) n  - Changes color gain by n and returns the current value (requires current and max reading support).
-     volume n            - Changes volume by n and returns the current value (requires current and max reading support).
+ chg luminance n         - Changes luminance by n (requires current- and maximum-value reading support).
+     contrast n          - Changes contrast by n (requires current- and maximum-value reading support).
+     (red|green|blue) n  - Changes the selected color-channel gain by n (requires current- and maximum-value reading support).
+     volume n            - Changes volume by n (requires current- and maximum-value reading support).
 
- display list [detailed] - Lists displays. If `detailed` is provided, prints display extended attributes.
-         n               - Chooses which display to control (use number 1, 2 etc.)
-         (method=)<id>   - Chooses which display to control using the number using a specific identification method. (If not set, it defaults to `uuid`).
-                           Possible values for `method` are:
-                           'id':    <display_id>
-                           'uuid':  <system_uuid>  *Default
-                           'edid':  <edid_uuid>
-                           'seid':  <alphnum_serial>:<edid_uuid>
-                           'basic': <vendor>:<model>:<serial>
-                           'ext':   <vendor>:<model>:<serial>:<manufacturer>:<alphnum_serial>:<product_name>
-                           'full':  <vendor>:<model>:<serial>:<manufacturer>:<alphnum_serial>:<product_name>:<io_location>
+ display list [detailed] - Lists connected displays. With detailed, also prints extended display attributes.
+         n               - Selects a display by its list number (1, 2, etc.).
+         [method=]<id>   - Selects a display using an identifier. The default method is uuid.
+                           Available identification methods:
+                           id:    <display_id>
+                           uuid:  <system_uuid>  (default)
+                           edid:  <edid_uuid>
+                           seid:  <alphanumeric_serial>:<edid_uuid>
+                           basic: <vendor>:<model>:<serial>
+                           ext:   <vendor>:<model>:<serial>:<manufacturer>:<alphanumeric_serial>:<product_name>
+                           full:  <vendor>:<model>:<serial>:<manufacturer>:<alphanumeric_serial>:<product_name>:<io_location>
 ```
 
 > [!TIP]
