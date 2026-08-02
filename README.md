@@ -64,6 +64,8 @@ m1ddc display 10ACB8A0-0000-0000-1419-0104A2435078 set input 15`
                            DisplayPort 1: 15, DisplayPort 2: 16, HDMI 1: 17, HDMI 2: 18.
      kvm n               - Sets KVM order on certain Dell screens, possible values: TBD.
      kvm-switch          - Moves KVM to the next device on some Dells.
+     asus-kvm n          - Selects the USB upstream on certain ASUS screens (e.g. XG27UCDMG) when Auto KVM is disabled, possible values:
+                           USB-B: 2, USB-C: 3.
 
  get luminance           - Returns current luminance (if supported by the display).
      contrast            - Returns current contrast (if supported by the display).

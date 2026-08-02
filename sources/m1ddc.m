@@ -46,9 +46,11 @@ static void printUsage() {
     "     pbp-input n         - Sets second PIP/PBP input on certain Dell screens, possible values:\n"
     "                           DisplayPort 1: 15, DisplayPort 2: 16, HDMI 1: 17, HDMI 2: 18.\n"
     "                           HDMI 1 and HDMI 2 and DisplayPort 1: 15953.\n"
-    "     kvm n               - Sets KVM order on certain Dell screens, possible values:.\n"
+    "     kvm n               - Sets KVM order on certain Dell screens, possible values:\n"
     "                           USB1, USB2, USB3, USB4: 1728.\n"
     "                           Set 65280 to move KVM to the next device on some Dells.\n"
+    "     asus-kvm n          - Selects the USB upstream on certain ASUS screens (e.g. XG27UCDMG) when Auto KVM is disabled, possible values:\n"
+    "                           USB-B: 2, USB-C: 3.\n"
     "\n"
     " get luminance           - Returns current luminance (if supported by the display).\n"
     "     contrast            - Returns current contrast (if supported by the display).\n"
@@ -150,6 +152,7 @@ static UInt8 attrCodeFromCommand(char *command) {
     else if (STR_EQ(command, "pbp") || STR_EQ(command, "p")) { return PBP; }
     else if (STR_EQ(command, "pbp-input") || STR_EQ(command, "pi")) { return PBP_INPUT; }
     else if (STR_EQ(command, "kvm") || STR_EQ(command, "k")) { return KVM; }
+    else if (STR_EQ(command, "asus-kvm")) { return ASUS_KVM; }
     return 0x00;
 }
 
