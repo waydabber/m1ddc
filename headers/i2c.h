@@ -40,7 +40,7 @@ typedef struct {
 
 DDCPacket	createDDCPacket(UInt8 attrCode);
 
-void		prepareDDCRead(UInt8 *data);
+void		prepareDDCRead(DDCPacket *packet);
 void		prepareDDCWrite(DDCPacket *packet, UInt16 setValue);
 
 IOReturn	performDDCWrite(IOAVServiceRef avService, DDCPacket *packet);

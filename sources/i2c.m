@@ -23,10 +23,11 @@ DDCPacket createDDCPacket(UInt8 attrCode) {
 }
 
 // Prepare DDC packet for read
-void prepareDDCRead(UInt8* data) {
+void prepareDDCRead(DDCPacket *packet) {
+    UInt8* data = packet->data;
     data[0] = 0x82;
     data[1] = 0x01;
-    data[3] = 0x6e ^ data[0] ^ data[1] ^ data[2] ^ data[3];
+    data[3] = 0x6E ^ packet->inputAddr ^ data[0] ^ data[1] ^ data[2];
 }
 
 // Prepare DDC packet for write
