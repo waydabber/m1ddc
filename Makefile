@@ -29,6 +29,7 @@ BIN_DIR =	/usr/local/bin
 # Sources & Objects - Binary
 SOURCES =	i2c \
 			ioregistry \
+			avservice \
 			m1ddc \
 
 OBJ_DIR =	.objects
