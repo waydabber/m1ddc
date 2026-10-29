@@ -105,7 +105,7 @@ static void printDisplayInfos(DisplayInfos *display, int nbDisplays, bool detail
 static DDCValue readingOperation(DDCTransport *transport, DDCPacket *packet) {
     DDCValue dummyAttr = {-1, -1};
 
-    prepareDDCRead(packet->data);
+    prepareDDCRead(packet);
 
     IOReturn err = performDDCWriteAtChipAddress(transport->service, transport->chipAddress, packet);
     if (err) {
