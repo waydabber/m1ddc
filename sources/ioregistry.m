@@ -11,7 +11,7 @@ static CFTypeRef getCFStringRef(io_service_t service, char* key) {
     return IORegistryEntrySearchCFProperty(service, kIOServicePlane, cfstring, kCFAllocatorDefault, kIORegistryIterateRecursively);
 }
 
-static Boolean isMCDP29XXProxy(io_service_t proxy) {
+Boolean isMCDP29XXProxy(io_service_t proxy) {
     io_registry_entry_t parent = MACH_PORT_NULL;
     if (IORegistryEntryGetParentEntry(proxy, kIOServicePlane, &parent) != KERN_SUCCESS) {
         return false;

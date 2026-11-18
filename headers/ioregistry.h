@@ -43,6 +43,7 @@ DisplayInfos*   selectDisplay(DisplayInfos *displays, int connectedDisplays, cha
 IOAVServiceRef  getDefaultDisplayAVService();
 IOAVServiceRef  getDisplayAVService(DisplayInfos* displayInfos);
 DDCTransport    getDisplayDDCTransport(DisplayInfos* displayInfos);
+Boolean         isMCDP29XXProxy(io_service_t proxy);
 
 // External functions
 extern IOAVServiceRef   IOAVServiceCreate(CFAllocatorRef allocator);

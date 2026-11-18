@@ -4,6 +4,7 @@
 @import CoreGraphics;
 
 #include "ioregistry.h"
+#include "avservice.h"
 #include "i2c.h"
 #include "utils.h"
 
@@ -68,6 +69,10 @@ static void printUsage() {
     "     volume n            - Changes volume by n and returns the current value (requires current and max reading support).\n"
     "\n"
     " display list [detailed] - Lists displays. If `detailed` is provided, prints display extended attributes.\n"
+    "         list all        - Lists every DDC-capable display the Mac is connected to, including displays that are\n"
+    "                           powered on but currently showing another input (not part of the macOS desktop).\n"
+    "                           Entries without a matching macOS display are marked (note: the macOS list is capped\n"
+    "                           at MAX_DISPLAYS, 4 by default).\n"
     "         n               - Chooses which display to control (use number 1, 2 etc.)\n"
     "         (method=)<id>   - Chooses which display to control using a specific identification method. (If not set, it defaults to `uuid`).\n"
     "                           Possible values for `method` are:\n"
@@ -78,6 +83,8 @@ static void printUsage() {
     "                           'basic': <vendor>:<model>:<serial>\n"
     "                           'ext':   <vendor>:<model>:<serial>:<manufacturer>:<alphnum_serial>:<product_name>\n"
     "                           'full':  <vendor>:<model>:<serial>:<manufacturer>:<alphnum_serial>:<product_name>:<io_location>\n"
+    "                           'serial': <alphnum_serial> - matched over `display list all`, so it also reaches a\n"
+    "                                    display that is showing another input (if the display accepts DDC there).\n"
     "\n"
     "Tip: You can also use 'l', 'v' instead of 'luminance', 'volume' etc.\n");
 }
@@ -97,6 +104,28 @@ static void printDisplayInfos(DisplayInfos *display, int nbDisplays, bool detail
             writeToStdOut([NSString stringWithFormat:@" - EDID UUID:     %@\n", (display + i)->edid]);
             writeToStdOut([NSString stringWithFormat:@" - IO Location:   %@\n", (display + i)->ioLocation]);
             writeToStdOut([NSString stringWithFormat:@" - Adapter:       %u\n", (display + i)->adapter]);
+        }
+    }
+}
+
+static void printAVServiceInfos(AVServiceInfos *sinks, int nbSinks, bool detailed) {
+    for (int i = 0; i < nbSinks; i++) {
+        AVServiceInfos *sink = sinks + i;
+        if (sink->edidStatus != kIOReturnSuccess) {
+            writeToStdOut([NSString stringWithFormat:@"[%i] (EDID not readable: %s)\n", (i + 1), mach_error_string(sink->edidStatus)]);
+            continue;
+        }
+        writeToStdOut([NSString stringWithFormat:@"[%i] %@ (%@) %@\n", (i + 1), sink->productName ?: @"Unknown Display",
+            sink->alphNumSerial ?: @"-", sink->displayID ? @"" : @"- no matching macOS display"]);
+        if (detailed) {
+            writeToStdOut([NSString stringWithFormat:@" - Product name:  %@\n", sink->productName ?: @"Unknown Display"]);
+            writeToStdOut([NSString stringWithFormat:@" - Manufacturer:  %@\n", sink->manufacturer]);
+            writeToStdOut([NSString stringWithFormat:@" - AN Serial:     %@\n", sink->alphNumSerial ?: @""]);
+            writeToStdOut([NSString stringWithFormat:@" - Vendor:        %u (0x%04x)\n", sink->vendor, sink->vendor]);
+            writeToStdOut([NSString stringWithFormat:@" - Model:         %u (0x%04x)\n", sink->model, sink->model]);
+            writeToStdOut([NSString stringWithFormat:@" - Serial:        %u (0x%04x)\n", sink->serial, sink->serial]);
+            writeToStdOut([NSString stringWithFormat:@" - Display ID:    %@\n", sink->displayID ? [NSString stringWithFormat:@"%u", sink->displayID] : @"none (not driven by macOS)"]);
+            writeToStdOut([NSString stringWithFormat:@" - Registry ID:   0x%llx\n", sink->registryID]);
         }
     }
 }
@@ -191,37 +220,65 @@ int main(int argc, char** argv) {
 
     DisplayInfos displayInfos[MAX_DISPLAYS];
     DisplayInfos *selectedDisplay = NULL;
-
-    // Display lister and selection
-    if (STR_EQ(argv[0], "display")) {
-
-        int connectedDisplays = getOnlineDisplayInfos(displayInfos);
-        if (connectedDisplays == 0) {
-            writeToStdOut(@"No external display found, aborting");
-            return EXIT_FAILURE;
-        }
-
-        // Printing out display list
-        if (STR_EQ(argv[1], "list") || STR_EQ(argv[1], "l")) {
-            printDisplayInfos(displayInfos, connectedDisplays, (argc >= 3 && (STR_EQ(argv[2], "detailed") || STR_EQ(argv[2], "d"))));
-            return EXIT_SUCCESS;
-        }
-
-        // Selecting display
-        selectedDisplay = selectDisplay(displayInfos, connectedDisplays, argv[1]);
-        if (selectedDisplay == NULL) {
-            writeToStdOut(@"The specified display does not exist. Use 'display list' to list displays and use it's number (1, 2...) or its UUID to specify display!\n");
-            return EXIT_FAILURE;
-        }
-
-		argv += 2;
-        argc -= 2;
-    }
+    DisplayInfos directDisplay;
 
     DDCTransport transport = {
         .service = NULL,
         .chipAddress = DDC_CHIP_ADDRESS_DEFAULT,
     };
+
+    // Display lister and selection
+    if (STR_EQ(argv[0], "display")) {
+
+        int connectedDisplays = getOnlineDisplayInfos(displayInfos);
+        bool listing = STR_EQ(argv[1], "list") || STR_EQ(argv[1], "l");
+        bool wholeSet = (listing && argc >= 3 && (STR_EQ(argv[2], "all") || STR_EQ(argv[2], "a")))
+            || strncmp(argv[1], "serial=", 7) == 0;
+
+        // The direct path enumerates every DDC-capable display, whether or not macOS is driving it
+        if (wholeSet) {
+            AVServiceInfos sinks[MAX_AVSERVICES];
+            int nbSinks = getAVServiceInfos(sinks, MAX_AVSERVICES);
+            matchAVServicesToDisplays(sinks, nbSinks, displayInfos, connectedDisplays);
+            if (listing) {
+                printAVServiceInfos(sinks, nbSinks, (argc >= 4 && (STR_EQ(argv[3], "detailed") || STR_EQ(argv[3], "d"))));
+                releaseAVServiceInfos(sinks, nbSinks);
+                return nbSinks > 0 ? EXIT_SUCCESS : EXIT_FAILURE;
+            }
+            AVServiceInfos *sink = selectAVService(sinks, nbSinks, argv[1] + 7);
+            if (sink != NULL) {
+                transport = getAVServiceDDCTransport(sink);
+                fillDisplayInfosFromAVService(&directDisplay, sink);
+                selectedDisplay = &directDisplay;
+            }
+            releaseAVServiceInfos(sinks, nbSinks);
+            if (selectedDisplay == NULL || transport.service == NULL) {
+                writeToStdOut(@"The specified display does not exist. Use 'display list all' to list every DDC-capable display and its serial!\n");
+                return EXIT_FAILURE;
+            }
+        } else {
+            if (connectedDisplays == 0) {
+                writeToStdOut(@"No external display found, aborting");
+                return EXIT_FAILURE;
+            }
+
+            // Printing out display list
+            if (listing) {
+                printDisplayInfos(displayInfos, connectedDisplays, (argc >= 3 && (STR_EQ(argv[2], "detailed") || STR_EQ(argv[2], "d"))));
+                return EXIT_SUCCESS;
+            }
+
+            // Selecting display
+            selectedDisplay = selectDisplay(displayInfos, connectedDisplays, argv[1]);
+            if (selectedDisplay == NULL) {
+                writeToStdOut(@"The specified display does not exist. Use 'display list' to list displays and use it's number (1, 2...) or its UUID to specify display!\n");
+                return EXIT_FAILURE;
+            }
+        }
+
+		argv += 2;
+        argc -= 2;
+    }
 
     // For unqualified commands, use the main display's matched service only
     // when it is positively identified as MCDP29xx. Otherwise preserve the
@@ -249,7 +306,7 @@ int main(int argc, char** argv) {
             selectedDisplay = displayInfos;
             transport.service = getDefaultDisplayAVService();
         }
-    } else {
+    } else if (transport.service == NULL) {
         transport = getDisplayDDCTransport(selectedDisplay);
     }
 
@@ -264,7 +321,7 @@ int main(int argc, char** argv) {
     }
 
     if (verbose) {
-        writeToStdOut([NSString stringWithFormat:@"Using display: %@ [%@]\n", selectedDisplay->productName, selectedDisplay->uuid]);
+        writeToStdOut([NSString stringWithFormat:@"Using display: %@ [%@]\n", selectedDisplay->productName, selectedDisplay->uuid ?: selectedDisplay->alphNumSerial ?: @"-"]);
     }
 
     DDCValue displayAttr = {-1, -1};

@@ -41,6 +41,10 @@ m1ddc display list
 m1ddc display 1 set volume 50
 # Sets input to DisplayPort 1 on display with UUID '10ACB8A0-0000-0000-1419-0104A2435078'
 m1ddc display 10ACB8A0-0000-0000-1419-0104A2435078 set input 15`
+# Lists every DDC-capable display, including ones currently showing another computer
+m1ddc display list all
+# Switches a display that is showing another input back to the Mac, selecting it by its EDID serial
+m1ddc display serial=SALMQS134621 set input 27
 ```
 
 ## Available commands
@@ -85,6 +89,8 @@ m1ddc display 10ACB8A0-0000-0000-1419-0104A2435078 set input 15`
      volume n            - Changes volume by n (requires current- and maximum-value reading support).
 
  display list [detailed] - Lists connected displays. With detailed, also prints extended display attributes.
+         list all [detailed] - Lists every DDC-capable display, including displays that are powered on but
+                           currently showing another input (see "Displays showing another input" below).
          n               - Selects a display by its list number (1, 2, etc.).
          [method=]<id>   - Selects a display using an identifier. The default method is uuid.
                            Available identification methods:
@@ -95,6 +101,7 @@ m1ddc display 10ACB8A0-0000-0000-1419-0104A2435078 set input 15`
                            basic: <vendor>:<model>:<serial>
                            ext:   <vendor>:<model>:<serial>:<manufacturer>:<alphanumeric_serial>:<product_name>
                            full:  <vendor>:<model>:<serial>:<manufacturer>:<alphanumeric_serial>:<product_name>:<io_location>
+                           serial: <alphanumeric_serial>  (matched over `display list all`)
 ```
 
 > [!TIP]
@@ -117,6 +124,34 @@ The following display identification methods are supported, and corresponds to t
 
 > [!TIP]
 > Corresponding display attributes can be obtained using the `display list detailed` command
+
+## Displays showing another input
+
+`display list` and the identification methods above start from the list of displays macOS is currently
+driving (CoreGraphics). A display that is powered on but showing another input (another computer on a
+KVM-style desk, for example) is not in that list, so it cannot be selected even though the Mac's
+DisplayPort/USB-C link to it is still up and the display may still answer DDC/CI on it. This is the
+situation described in issue #26.
+
+`display list all` enumerates the DDC services directly in the IORegistry (every external
+`DCPAVServiceProxy`) and identifies each one by reading its EDID over I2C, so it shows every display the
+Mac is connected to, whether or not macOS is driving it. Entries that do not correspond to a display in
+`display list` are marked `no matching macOS display` (the macOS list is capped at `MAX_DISPLAYS`, 4 by
+default, so with more displays than that the mark is not conclusive). Any entry can be selected by its EDID
+serial number with `display serial=<alphanumeric_serial>`, independent of the macOS display list:
+
+```shell
+m1ddc display list all
+# [1] PG32UCDM (S9LMQS102814)
+# [2] PG32UCDM (SALMQS134621) - no matching macOS display
+m1ddc display serial=SALMQS134621 get input
+# 15
+m1ddc display serial=SALMQS134621 set input 27
+```
+
+Whether a display accepts DDC/CI on an inactive input is up to the display; many do (the ASUS PG32UCDM
+does over USB-C), some do not. `display list all` tells you only that the link exists, `get input` on it
+tells you whether the display answers.
 
 ## Example use in a script
 
