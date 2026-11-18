@@ -4,7 +4,7 @@
 # import <CoreGraphics/CoreGraphics.h>
 
 # ifndef MAX_DISPLAYS
-#  define MAX_DISPLAYS   4   // Set this to 2 or 4 depending on the Apple Silicon Mac you're using
+#  define MAX_DISPLAYS   8   // Set this to 2, 4 or 8 depending on the Apple Silicon Mac you're using
 # endif
 
 # define UUID_SIZE      37
