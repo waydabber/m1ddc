@@ -131,27 +131,40 @@ static void printAVServiceInfos(AVServiceInfos *sinks, int nbSinks, bool detaile
 }
 
 // Function to handle the reading operation (get, max, chg)
+// Retries until the reply is valid, up to DDC_READ_ATTEMPTS times; an invalid reply is never decoded.
 static DDCValue readingOperation(DDCTransport *transport, DDCPacket *packet) {
     DDCValue dummyAttr = {-1, -1};
+    IOReturn err = kIOReturnSuccess;
 
     prepareDDCRead(packet);
 
-    IOReturn err = performDDCWriteAtChipAddress(transport->service, transport->chipAddress, packet);
-    if (err) {
-        writeToStdOut([NSString stringWithFormat:@"DDC communication failure: %s\n", mach_error_string(err)]);
-        return dummyAttr;
+    for (int attempt = 1; attempt <= DDC_READ_ATTEMPTS; ++attempt) {
+        if (attempt > 1) {
+            usleep(DDC_RETRY_WAIT);
+        }
+        err = performDDCWriteAtChipAddress(transport->service, transport->chipAddress, packet);
+        if (err) {
+            continue;
+        }
+
+        DDCPacket readPacket = {};
+        readPacket.inputAddr = packet->inputAddr;
+
+        err = performDDCReadAtChipAddress(transport->service, transport->chipAddress, &readPacket);
+        if (err) {
+            continue;
+        }
+        if (isValidDDCReply(readPacket.data, packet->data[2])) {
+            return convertI2CtoDDC((char *)readPacket.data);
+        }
     }
 
-    DDCPacket readPacket = {};
-    readPacket.inputAddr = packet->inputAddr;
-
-    err = performDDCReadAtChipAddress(transport->service, transport->chipAddress, &readPacket);
     if (err) {
         writeToStdOut([NSString stringWithFormat:@"DDC communication failure: %s\n", mach_error_string(err)]);
-        return dummyAttr;
+    } else {
+        writeToStdOut(@"DDC communication failure: no valid reply\n");
     }
-
-    return convertI2CtoDDC((char *)readPacket.data);
+    return dummyAttr;
 }
 
 // Function to handle the writing operation (set, chg)

@@ -24,6 +24,9 @@
 # define DDC_WAIT			10000	// Depending on display this must be set to as high as 50000
 # define DDC_ITERATIONS		2		// Depending on display this must be set higher
 # define DDC_MCDP_READ_WAIT	50000	// 10 ms returned empty MCDP29xx replies in testing
+# define DDC_READ_WAIT		50000	// DDC/CI: wait at least 40 ms before reading a reply; 10 ms returned empty replies
+# define DDC_READ_ATTEMPTS	4		// Times a read is retried until the reply is valid
+# define DDC_RETRY_WAIT		50000	// Between read attempts
 # define DDC_BUFFER_SIZE	256
 
 
@@ -47,6 +50,7 @@ IOReturn	performDDCWrite(IOAVServiceRef avService, DDCPacket *packet);
 IOReturn	performDDCRead(IOAVServiceRef avService, DDCPacket *packet);
 IOReturn	performDDCWriteAtChipAddress(IOAVServiceRef avService, UInt32 chipAddress, DDCPacket *packet);
 IOReturn	performDDCReadAtChipAddress(IOAVServiceRef avService, UInt32 chipAddress, DDCPacket *packet);
+int		isValidDDCReply(UInt8 *data, UInt8 attrCode);
 
 DDCValue	convertI2CtoDDC(char *i2cBytes);
 
