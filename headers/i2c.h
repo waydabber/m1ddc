@@ -23,7 +23,11 @@
 
 # define DDC_WAIT			10000	// Depending on display this must be set to as high as 50000
 # define DDC_ITERATIONS		2		// Depending on display this must be set higher
-# define DDC_MCDP_READ_WAIT	50000	// 10 ms returned empty MCDP29xx replies in testing
+# define DDC_READ_WAIT		50000	// Default wait before reading a reply (--read-wait). DDC/CI asks for at least 40 ms;
+									// 10 ms returned empty replies, MCDP29xx ones included
+# define DDC_READ_WAIT_MAX_MS	1000	// Highest --read-wait accepted, in ms
+# define DDC_READ_ATTEMPTS	4		// Times a read is retried until the reply is valid
+# define DDC_RETRY_WAIT		50000	// Between read attempts
 # define DDC_BUFFER_SIZE	256
 
 
@@ -37,6 +41,14 @@ typedef struct {
 	signed int maxValue;
 } DDCValue;
 
+typedef enum {
+	DDC_REPLY_INVALID,		// Not a reply to the request (empty, echoed, shifted, bad checksum): ask again
+	DDC_REPLY_OK,			// A value
+	DDC_REPLY_UNSUPPORTED,	// The display says it doesn't support the VCP code (result 0x01)
+} DDCReplyStatus;
+
+extern useconds_t	ddcReadWait;	// Wait before reading a reply, in µs; DDC_READ_WAIT unless --read-wait is given
+
 
 DDCPacket	createDDCPacket(UInt8 attrCode);
 
@@ -47,6 +59,7 @@ IOReturn	performDDCWrite(IOAVServiceRef avService, DDCPacket *packet);
 IOReturn	performDDCRead(IOAVServiceRef avService, DDCPacket *packet);
 IOReturn	performDDCWriteAtChipAddress(IOAVServiceRef avService, UInt32 chipAddress, DDCPacket *packet);
 IOReturn	performDDCReadAtChipAddress(IOAVServiceRef avService, UInt32 chipAddress, DDCPacket *packet);
+DDCReplyStatus	checkDDCReply(UInt8 *data, UInt8 attrCode);
 
 DDCValue	convertI2CtoDDC(char *i2cBytes);
 
