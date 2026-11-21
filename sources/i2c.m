@@ -3,6 +3,8 @@
 #include "i2c.h"
 #include "utils.h"
 
+useconds_t ddcReadWait = DDC_READ_WAIT;
+
 static int getBytesUsed(UInt8* data) {
     int bytes = 0;
     // Check up to DDC_BUFFER_SIZE bytes, not sizeof(data) which is just pointer size
@@ -43,7 +45,7 @@ void prepareDDCWrite(DDCPacket *packet, UInt16 newValue) {
 
 IOReturn performDDCReadAtChipAddress(IOAVServiceRef avService, UInt32 chipAddress, DDCPacket *packet) {
     memset(packet->data, 0, sizeof(UInt8) * DDC_BUFFER_SIZE);
-    usleep(chipAddress == DDC_CHIP_ADDRESS_MCDP29XX ? DDC_MCDP_READ_WAIT : DDC_READ_WAIT);
+    usleep(ddcReadWait);
     return IOAVServiceReadI2C(avService, chipAddress, packet->inputAddr, packet->data, 12);
 }
 
@@ -69,17 +71,27 @@ IOReturn performDDCWrite(IOAVServiceRef avService, DDCPacket *packet) {
 
 
 // Check that the bytes read are a "Get VCP Feature Reply" for the requested code: source 0x6E, length 0x88,
-// opcode 0x02, result 0x00 (no error), VCP code, type, max (2 bytes), current (2 bytes), then a checksum
-// (0x50 XOR every byte before it). An empty buffer, an echo of the request or a shifted reply is rejected.
-int isValidDDCReply(UInt8 *data, UInt8 attrCode) {
-    if (data[0] != 0x6E || data[1] != 0x88 || data[2] != 0x02 || data[3] != 0x00 || data[4] != attrCode) {
-        return 0;
+// opcode 0x02, result code, VCP code, type, max (2 bytes), current (2 bytes), then a checksum (0x50 XOR every
+// byte before it). An empty buffer, an echo of the request or a shifted reply is invalid. In a reply that checks
+// out, result 0x00 carries a value and 0x01 means the display doesn't support the code (as ddcutil reads it).
+DDCReplyStatus checkDDCReply(UInt8 *data, UInt8 attrCode) {
+    if (data[0] != 0x6E || data[1] != 0x88 || data[2] != 0x02 || data[4] != attrCode) {
+        return DDC_REPLY_INVALID;
     }
     UInt8 checksum = 0x50;
     for (int i = 0; i < 10; ++i) {
         checksum ^= data[i];
     }
-    return checksum == data[10];
+    if (checksum != data[10]) {
+        return DDC_REPLY_INVALID;
+    }
+    if (data[3] == 0x00) {
+        return DDC_REPLY_OK;
+    }
+    if (data[3] == 0x01) {
+        return DDC_REPLY_UNSUPPORTED;
+    }
+    return DDC_REPLY_INVALID;
 }
 
 DDCValue convertI2CtoDDC(char *i2cBytes) {

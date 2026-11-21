@@ -47,6 +47,16 @@ m1ddc display list all
 m1ddc display serial=SALMQS134621 set input 27
 ```
 
+## Options
+
+Options go before the command, in any order:
+
+```
+ -v, --verbose           - Prints which display is used.
+ --read-wait ms          - Waits ms milliseconds (1 to 1000, default 50) before reading a reply from the display.
+                           Try a higher value if reads fail with "no valid reply".
+```
+
 ## Available commands
 
 ```

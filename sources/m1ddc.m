@@ -28,6 +28,12 @@ static void printUsage() {
     " m1ddc display list            - Lists displays\n"
     " m1ddc display 1 set volume 50 - Sets volume to 50 on Display 1\n"
     "\n"
+    "Options (before the command, in any order):\n"
+    "\n"
+    " -v, --verbose           - Prints which display is used.\n"
+    " --read-wait ms          - Waits ms milliseconds (1 to 1000, default 50) before reading a reply from the display.\n"
+    "                           Try a higher value if reads fail with 'no valid reply'.\n"
+    "\n"
     "Commands:\n"
     "\n"
     " set luminance n         - Sets luminance (brightness) to n, where n is a number between 0 and the maximum value (usually 100).\n"
@@ -132,6 +138,7 @@ static void printAVServiceInfos(AVServiceInfos *sinks, int nbSinks, bool detaile
 
 // Function to handle the reading operation (get, max, chg)
 // Retries until the reply is valid, up to DDC_READ_ATTEMPTS times; an invalid reply is never decoded.
+// A display that answers "unsupported VCP code" is taken at its word, without asking again.
 static DDCValue readingOperation(DDCTransport *transport, DDCPacket *packet) {
     DDCValue dummyAttr = {-1, -1};
     IOReturn err = kIOReturnSuccess;
@@ -154,8 +161,13 @@ static DDCValue readingOperation(DDCTransport *transport, DDCPacket *packet) {
         if (err) {
             continue;
         }
-        if (isValidDDCReply(readPacket.data, packet->data[2])) {
+        DDCReplyStatus reply = checkDDCReply(readPacket.data, packet->data[2]);
+        if (reply == DDC_REPLY_OK) {
             return convertI2CtoDDC((char *)readPacket.data);
+        }
+        if (reply == DDC_REPLY_UNSUPPORTED) {
+            writeToStdOut([NSString stringWithFormat:@"Unsupported VCP code 0x%02X: the display does not support this command\n", packet->data[2]]);
+            return dummyAttr;
         }
     }
 
@@ -225,10 +237,32 @@ int main(int argc, char** argv) {
 		return argc && STR_EQ(argv[0], "help") ? 1 : 0;
 	}
 
-    if (STR_EQ(argv[0], "-v") || STR_EQ(argv[0], "--verbose")) {
-        argv += 1;
-        argc -= 1;
-        verbose = true;
+    // Options come before the command, in any order. A command never starts with '-', so the first word
+    // that doesn't ends the options (a later '-10', as in 'chg volume -10', is never looked at here).
+    while (argc > 0 && argv[0][0] == '-') {
+        if (STR_EQ(argv[0], "-v") || STR_EQ(argv[0], "--verbose")) {
+            verbose = true;
+            argv += 1;
+            argc -= 1;
+        } else if (STR_EQ(argv[0], "--read-wait")) {
+            char *end = NULL;
+            long ms = argc > 1 ? strtol(argv[1], &end, 10) : 0;
+            if (argc < 2 || end == argv[1] || *end != '\0' || ms < 1 || ms > DDC_READ_WAIT_MAX_MS) {
+                writeToStdOut([NSString stringWithFormat:@"--read-wait needs a whole number of milliseconds, 1 to %d! Enter 'm1ddc help' for help!\n", DDC_READ_WAIT_MAX_MS]);
+                return EXIT_FAILURE;
+            }
+            ddcReadWait = (useconds_t)(ms * 1000);
+            argv += 2;
+            argc -= 2;
+        } else {
+            writeToStdOut([NSString stringWithFormat:@"Unknown option '%s'! Enter 'm1ddc help' for help!\n", argv[0]]);
+            return EXIT_FAILURE;
+        }
+    }
+
+    if (argc < 2) {
+        writeToStdOut(@"Missing parameter! Enter 'm1ddc help' for help!\n");
+        return EXIT_FAILURE;
     }
 
     DisplayInfos displayInfos[MAX_DISPLAYS];
