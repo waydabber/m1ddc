@@ -25,6 +25,7 @@
 # define DDC_ITERATIONS		2		// Depending on display this must be set higher
 # define DDC_READ_WAIT		50000	// Default wait before reading a reply (--read-wait). DDC/CI asks for at least 40 ms;
 									// 10 ms returned empty replies, MCDP29xx ones included
+# define DDC_MCDP_READ_WAIT	DDC_READ_WAIT	// Previous name used by library callers
 # define DDC_READ_WAIT_MAX_MS	1000	// Highest --read-wait accepted, in ms
 # define DDC_READ_ATTEMPTS	4		// Times a read is retried until the reply is valid
 # define DDC_RETRY_WAIT		50000	// Between read attempts
