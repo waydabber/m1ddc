@@ -156,8 +156,6 @@ If you like m1ddc, you'll like [BetterDisplay](https://betterdisplay.pro) even b
 
 BetterDisplay's CLI documentation: https://github.com/waydabber/BetterDisplay/wiki/Integration-features,-CLI
 
-If you need a complete Swift implementation for DDC control on Apple Silicon macs, you can take a look at [AppleSiliconDDC](https://github.com/waydabber/AppleSiliconDDC) which is a complete self-contained library I made for BetterDisplay (note: some features and M1 HDMI support is missing from the open source code) and MonitorControl.
-
 ## Raycast Extensions
 
 If you use [Raycast](https://raycast.com), there are extensions available for both m1ddc and BetterDisplay:
