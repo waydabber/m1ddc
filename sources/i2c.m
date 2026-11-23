@@ -74,12 +74,14 @@ IOReturn performDDCWrite(IOAVServiceRef avService, DDCPacket *packet) {
 // opcode 0x02, result code, VCP code, type, max (2 bytes), current (2 bytes), then a checksum (0x50 XOR every
 // byte before it). An empty buffer, an echo of the request or a shifted reply is invalid. In a reply that checks
 // out, result 0x00 carries a value and 0x01 means the display doesn't support the code (as ddcutil reads it).
-DDCReplyStatus checkDDCReply(UInt8 *data, UInt8 attrCode) {
-    if (data[0] != 0x6E || data[1] != 0x88 || data[2] != 0x02 || data[4] != attrCode) {
+// Some displays (e.g. LG 27UP85NP-W) return the I2C sub-address (inputAddr) in place of the length byte, while the
+// checksum is still computed over the real length byte 0x88: such a reply is accepted as if byte 1 were 0x88.
+DDCReplyStatus checkDDCReply(UInt8 *data, UInt8 attrCode, UInt8 inputAddr) {
+    if (data[0] != 0x6E || (data[1] != 0x88 && data[1] != inputAddr) || data[2] != 0x02 || data[4] != attrCode) {
         return DDC_REPLY_INVALID;
     }
-    UInt8 checksum = 0x50;
-    for (int i = 0; i < 10; ++i) {
+    UInt8 checksum = 0x50 ^ 0x6E ^ 0x88;
+    for (int i = 2; i < 10; ++i) {
         checksum ^= data[i];
     }
     if (checksum != data[10]) {

@@ -150,7 +150,7 @@ static DDCValue readingOperation(DDCTransport *transport, DDCPacket *packet) {
         if (err) {
             continue;
         }
-        DDCReplyStatus reply = checkDDCReply(readPacket.data, packet->data[2]);
+        DDCReplyStatus reply = checkDDCReply(readPacket.data, packet->data[2], packet->inputAddr);
         if (reply == DDC_REPLY_OK) {
             return convertI2CtoDDC((char *)readPacket.data);
         }
