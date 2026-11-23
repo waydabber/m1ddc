@@ -60,7 +60,7 @@ IOReturn	performDDCWrite(IOAVServiceRef avService, DDCPacket *packet);
 IOReturn	performDDCRead(IOAVServiceRef avService, DDCPacket *packet);
 IOReturn	performDDCWriteAtChipAddress(IOAVServiceRef avService, UInt32 chipAddress, DDCPacket *packet);
 IOReturn	performDDCReadAtChipAddress(IOAVServiceRef avService, UInt32 chipAddress, DDCPacket *packet);
-DDCReplyStatus	checkDDCReply(UInt8 *data, UInt8 attrCode);
+DDCReplyStatus	checkDDCReply(UInt8 *data, UInt8 attrCode, UInt8 inputAddr);
 
 DDCValue	convertI2CtoDDC(char *i2cBytes);
 
